@@ -1,0 +1,233 @@
+﻿@page "/ensaios/editar/{Id:int}"
+@using PhotoStudio.app.Models
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+
+<PageTitle>Editar Ensaio</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1>Editar Ensaio</h1>
+        <p class="subtitle">Atualize os dados do ensaio fotográfico</p>
+    </div>
+
+    @if (carregando)
+    {
+        <div class="loading">Carregando ensaio...</div>
+    }
+    else if (ensaio == null)
+    {
+        <div class="empty-message">
+            Ensaio não encontrado.
+        </div>
+    }
+    else
+    {
+        <div class="form-container">
+
+            <div class="form-group">
+                <label>Título</label>
+                <input class="form-control" @bind="ensaio.Titulo" />
+            </div>
+
+            <div class="form-group">
+                <label>Tipo de Ensaio</label>
+                <select class="form-control" @bind="ensaio.Tipo">
+                    @foreach (var tipo in Enum.GetValues<TipoEnsaio>())
+                    {
+                        <option value="@tipo">@tipo</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Data</label>
+                <input type="datetime-local"
+                       class="form-control"
+                       @bind-value="ensaio.Data"
+                       @bind-value:format="yyyy-MM-ddTHH:mm" />
+            </div>
+
+            <div class="form-group">
+                <label>Local</label>
+                <input class="form-control" @bind="ensaio.Local" />
+            </div>
+
+            <div class="form-group">
+                <label>Valor (R$)</label>
+                <input type="number" step="0.01" class="form-control" @bind="ensaio.Valor" />
+            </div>
+
+            <div class="form-group">
+                <label>Cliente</label>
+                <select class="form-control" @bind="ensaio.ClienteId">
+                    <option value="">Selecione um cliente</option>
+                    @foreach (var cliente in clientes)
+                    {
+                        <option value="@cliente.Id">@cliente.Nome</option>
+                    }
+                </select>
+            </div>
+
+            <div class="actions-bar">
+                <button class="btn btn-secondary" @onclick="Voltar">
+                    Cancelar
+                </button>
+
+                <button class="btn btn-primary" @onclick="Salvar">
+                    Salvar Alterações
+                </button>
+            </div>
+
+        </div>
+    }
+</div>
+
+<style>
+    .page-container {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+
+        .page-header h1 {
+            font-size: 2.2rem;
+            color: #2d3748;
+            margin-bottom: 6px;
+        }
+
+    .subtitle {
+        color: #718096;
+    }
+
+    .form-container {
+        width: 100%;
+        max-width: 600px;
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 16px;
+    }
+
+        .form-group label {
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 6px;
+        }
+
+    .form-control {
+        padding: 10px 14px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+
+    .actions-bar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    .btn {
+        padding: 10px 26px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        border: none;
+        transition: 0.2s;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+    }
+
+    .btn-secondary {
+        background: #edf2f7;
+        color: #4a5568;
+    }
+
+    .loading,
+    .empty-message {
+        padding: 25px;
+        text-align: center;
+        color: #4a5568;
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private EnsaioModel? ensaio;
+    private List<ClienteModel> clientes = new();
+    private bool carregando = true;
+
+    protected override void OnInitialized()
+    {
+        CarregarClientes();
+        CarregarEnsaio();
+    }
+
+    private void CarregarEnsaio()
+    {
+        // Mock — substituir por GET /ensaios/{id}
+        ensaio = new EnsaioModel
+        {
+            Id = Id,
+            Titulo = $"Ensaio {Id}",
+            Tipo = TipoEnsaio.Casamento,
+            Data = DateTime.Now.AddDays(3),
+            Local = "Estúdio Central",
+            Valor = 1200,
+            ClienteId = 1
+        };
+
+        carregando = false;
+    }
+
+    private void CarregarClientes()
+    {
+        // Mock — substituir futuramente por GET /clientes
+        var rnd = new Random();
+
+        for (int i = 1; i <= 10; i++)
+        {
+            clientes.Add(new ClienteModel
+            {
+                Id = i,
+                Nome = $"Cliente {i}",
+                Telefone = $"(51) 9{rnd.Next(1000, 9999)}-{rnd.Next(1000, 9999)}",
+                Email = $"cliente{i}@email.com",
+                Endereco = $"Rua {i}, Porto Alegre"
+            });
+        }
+    }
+
+    private void Salvar()
+    {
+        // PUT /ensaios/{id}
+        Navigation.NavigateTo("/ensaios");
+    }
+
+    private void Voltar()
+    {
+        Navigation.NavigateTo("/ensaios");
+    }
+}

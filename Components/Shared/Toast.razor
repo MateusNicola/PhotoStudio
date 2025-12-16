@@ -1,0 +1,57 @@
+﻿@using PhotoStudio.app.Services
+@implements IDisposable
+@inject ToastService ToastService
+
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
+    @if (mostrar)
+    {
+        <div class="toast show @CssClasse" role="alert">
+            <div class="toast-body d-flex justify-content-between align-items-center">
+                <span>@mensagem</span>
+                <button type="button" class="btn-close ms-2" @onclick="Fechar"></button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private bool mostrar;
+    private string mensagem = string.Empty;
+    private string CssClasse = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += Mostrar;
+    }
+
+    private void Mostrar(string msg, ToastType tipo)
+    {
+        mensagem = msg;
+        CssClasse = tipo switch
+        {
+            ToastType.Success => "text-bg-success",
+            ToastType.Error => "text-bg-danger",
+            ToastType.Warning => "text-bg-warning",
+            _ => "text-bg-info"
+        };
+
+        mostrar = true;
+        StateHasChanged();
+
+        _ = Task.Delay(3000).ContinueWith(_ =>
+        {
+            mostrar = false;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void Fechar()
+    {
+        mostrar = false;
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= Mostrar;
+    }
+}

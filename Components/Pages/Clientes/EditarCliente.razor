@@ -1,0 +1,438 @@
+﻿@page "/clientes/editar/{Id:int}"
+@rendermode InteractiveServer
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Data
+@using PhotoStudio.app.Services
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<PageTitle>Editar Cliente - Estúdio de Fotografia</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <div class="header-content">
+            <button class="btn-back" @onclick="Voltar" title="Voltar">
+                <span>←</span>
+            </button>
+            <div>
+                <h1>Editar Cliente</h1>
+                <p class="subtitle">Atualize as informações do cliente</p>
+            </div>
+        </div>
+    </div>
+
+    @if (carregando)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Carregando dados do cliente...</p>
+        </div>
+    }
+    else if (cliente == null)
+    {
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h3>Cliente não encontrado</h3>
+            <p>O cliente que você está tentando editar não existe.</p>
+            <button class="btn btn-primary" @onclick="Voltar">
+                Voltar para Clientes
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="form-container">
+            <EditForm Model="@cliente" OnValidSubmit="Salvar">
+                <DataAnnotationsValidator />
+
+                <div class="form-grid">
+                    <!-- Nome -->
+                    <div class="form-group full-width">
+                        <label for="nome">Nome Completo *</label>
+                        <InputText id="nome" class="form-control" @bind-Value="cliente.Nome"
+                                   placeholder="Ex: João da Silva" />
+                        <ValidationMessage For="@(() => cliente.Nome)" />
+                    </div>
+
+                    <!-- Telefone -->
+                    <div class="form-group">
+                        <label for="telefone">Telefone *</label>
+                        <InputText id="telefone" class="form-control" @bind-Value="cliente.Telefone"
+                                   placeholder="(00) 00000-0000" />
+                        <ValidationMessage For="@(() => cliente.Telefone)" />
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label for="email">E-mail *</label>
+                        <InputText id="email" type="email" class="form-control" @bind-Value="cliente.Email"
+                                   placeholder="exemplo@email.com" />
+                        <ValidationMessage For="@(() => cliente.Email)" />
+                    </div>
+
+                    <!-- Endereço -->
+                    <div class="form-group full-width">
+                        <label for="endereco">Endereço Completo *</label>
+                        <InputText id="endereco" class="form-control" @bind-Value="cliente.Endereco"
+                                   placeholder="Rua, Número, Bairro - Cidade/UF" />
+                        <ValidationMessage For="@(() => cliente.Endereco)" />
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="Voltar" disabled="@salvando">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" disabled="@salvando">
+                        @if (salvando)
+                        {
+                            <span class="spinner"></span>
+                            <span>Salvando...</span>
+                        }
+                        else
+                        {
+                            <span>💾 Salvar Alterações</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+<style>
+    .page-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .btn-back {
+        background: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #4a5568;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .btn-back:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+            transform: translateX(-4px);
+        }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin: 0 0 8px 0;
+    }
+
+    .subtitle {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+    label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background: white;
+        color: #2d3748;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-control::placeholder {
+            color: #a0aec0;
+        }
+
+    .validation-message {
+        color: #e53e3e;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 12px 32px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .btn-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 2px solid #e2e8f0;
+    }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Loading State */
+    .loading-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    .loading-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    /* Error State */
+    .error-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .error-icon {
+        font-size: 4rem;
+        margin-bottom: 16px;
+    }
+
+    .error-container h3 {
+        color: #2d3748;
+        font-size: 1.8rem;
+        margin: 0 0 12px 0;
+    }
+
+    .error-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0 0 24px 0;
+    }
+
+    /* Responsivo */
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group.full-width {
+            grid-column: 1;
+        }
+
+        .form-actions {
+            flex-direction: column-reverse;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .header-content {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-back {
+            align-self: flex-start;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private ClienteModel? cliente;
+    private bool carregando = true;
+    private bool salvando = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarCliente();
+    }
+
+    private async Task CarregarCliente()
+    {
+        carregando = true;
+        StateHasChanged();
+
+        try
+        {
+            cliente = await DbContext.Clientes
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == Id);
+
+            if (cliente == null)
+            {
+                ToastService.Error("Cliente não encontrado.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao carregar cliente: {ex.Message}");
+            cliente = null;
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task Salvar()
+    {
+        if (cliente == null) return;
+
+        salvando = true;
+        StateHasChanged();
+
+        try
+        {
+            await DbContext.SaveChangesAsync();
+
+            ToastService.Success("Cliente atualizado com sucesso!");
+            await Task.Delay(500); // Pequeno delay para feedback visual
+            Navigation.NavigateTo("/clientes");
+        }
+        catch (DbUpdateException ex)
+        {
+            ToastService.Error($"Erro ao salvar no banco de dados: {ex.InnerException?.Message ?? ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao salvar alterações: {ex.Message}");
+        }
+        finally
+        {
+            salvando = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Voltar()
+    {
+        Navigation.NavigateTo("/clientes");
+    }
+}
