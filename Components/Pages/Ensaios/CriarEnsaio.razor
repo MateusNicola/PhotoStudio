@@ -1,8 +1,13 @@
 ﻿@page "/ensaios/criarEnsaio"
 @rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
+@using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
+@using PhotoStudio.app.Services
 @inject NavigationManager Navigation
+@inject AppDbContext DbContext
+@inject ToastService ToastService
 
 <PageTitle>Criar Ensaio</PageTitle>
 
@@ -28,13 +33,17 @@
                 <!-- Tipo de Ensaio -->
                 <div class="form-group">
                     <label for="tipo">Tipo de Ensaio *</label>
-                    <InputSelect id="tipo" @bind-Value="novoEnsaio.Tipo" class="form-control">
-                        <option value="">Selecione o tipo</option>
-                        @foreach (var tipo in Enum.GetValues<TipoEnsaio>())
+                    <InputSelect id="tipo"
+                                 class="form-control"
+                                 @bind-Value="novoEnsaio.Tipo">
+                        <option value="">Selecione o tipo de ensaio</option>
+
+                        @foreach (TipoEnsaio tipo in Enum.GetValues(typeof(TipoEnsaio)))
                         {
                             <option value="@tipo">@tipo</option>
                         }
                     </InputSelect>
+
                     <ValidationMessage For="@(() => novoEnsaio.Tipo)" />
                 </div>
 
@@ -84,8 +93,11 @@
                 <!-- Valor -->
                 <div class="form-group">
                     <label for="valor">Valor (R$)</label>
-                    <InputNumber id="valor" @bind-Value="novoEnsaio.Valor"
-                                 class="form-control" placeholder="0,00" />
+                    <InputNumber TValue="decimal?"
+                                 id="valor"
+                                 @bind-Value="novoEnsaio.Valor"
+                                 class="form-control"
+                                 placeholder="0,00" />
                     <ValidationMessage For="@(() => novoEnsaio.Valor)" />
                 </div>
             </div>
@@ -378,59 +390,28 @@
     private bool mostrarSucesso = false;
     private string mensagemErro = "";
 
-    protected override void OnInitialized()
+    protected async override Task OnInitializedAsync()
     {
-        CarregarClientes();
+        await CarregarClientes();
     }
 
-    private void CarregarClientes()
+    private async Task CarregarClientes()
     {
-        // Dados simulados - substitua pela sua lógica de acesso a dados
-        var random = new Random();
-        for (int i = 1; i <= 15; i++)
-        {
-            clientes.Add(new ClienteModel
-            {
-                Id = i,
-                Nome = $"Cliente {i}",
-                Telefone = $"(51) 9{random.Next(1000, 9999)}-{random.Next(1000, 9999)}",
-                Email = $"cliente{i}@email.com",
-                Endereco = $"Rua {i}, Alvorada - RS"
-            });
-        }
+        clientes = await DbContext.Clientes
+        .AsNoTracking()
+        .OrderBy(c => c.Nome)
+        .ToListAsync();
     }
 
     private async Task SalvarEnsaio()
     {
-        mensagemErro = "";
-
-        // Validações customizadas
-        if (string.IsNullOrWhiteSpace(novoEnsaio.Titulo))
-        {
-            mensagemErro = "O título é obrigatório.";
-            return;
-        }
-
         if (novoEnsaio.ClienteId == 0)
         {
-            mensagemErro = "Selecione um cliente.";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(novoEnsaio.Local))
-        {
-            mensagemErro = "O local é obrigatório.";
-            return;
-        }
-
-        if (string.IsNullOrEmpty(horaEnsaio))
-        {
-            mensagemErro = "O horário é obrigatório.";
+            ToastService.Error("Selecione um cliente.");
             return;
         }
 
         salvando = true;
-        StateHasChanged();
 
         try
         {
@@ -438,28 +419,23 @@
             var hora = TimeSpan.Parse(horaEnsaio);
             novoEnsaio.Data = dataEnsaio.Date.Add(hora);
 
-            // Aqui você salvaria no banco de dados
-            await Task.Delay(1000); // Simula salvamento
+            DbContext.Ensaios.Add(novoEnsaio);
+            await DbContext.SaveChangesAsync();
 
-            // Mostra mensagem de sucesso
-            mostrarSucesso = true;
-            StateHasChanged();
-
-            // Limpa o formulário após 2 segundos
-            await Task.Delay(2000);
-            LimparFormulario();
-            mostrarSucesso = false;
+            ToastService.Success("Ensaio criado com sucesso!");
+            await Task.Delay(300);
+            Navigation.NavigateTo("/ensaios");
         }
-        catch (Exception ex)
+        catch (DbUpdateException ex)
         {
-            mensagemErro = $"Erro ao salvar ensaio: {ex.Message}";
+            ToastService.Error(ex.InnerException?.Message ?? ex.Message);
         }
         finally
         {
             salvando = false;
-            StateHasChanged();
         }
     }
+
 
     private void LimparFormulario()
     {

@@ -1,4 +1,6 @@
-﻿namespace PhotoStudio.app.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace PhotoStudio.app.Models
 {
     public class EnsaioModel
     {
@@ -7,16 +9,18 @@
         public required TipoEnsaio Tipo { get; set; }
         public required DateTime Data { get; set; }
         public required string Local { get; set; }
-        public double? Valor { get; set; }
+        public decimal? Valor { get; set; }
+        [Column("cliente_id")]
         public required int ClienteId { get; set; }
+        public ClienteModel Cliente { get; set; } = null!;
     }
 
     public enum TipoEnsaio
     {
-        Casamento,
-        Aniversario,
-        Retrato,
-        Corporativo,
-        Outros
+        Retrato = 1,
+        Casamento = 2,
+        Gestante = 3,
+        Infantil = 4,
+        Evento = 5
     }
 }

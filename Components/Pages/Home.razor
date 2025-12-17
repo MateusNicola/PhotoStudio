@@ -506,7 +506,7 @@
 
     private int ensaiosMes;
     private int clientesNovosMes;
-    private double faturamentoMes;
+    private decimal faturamentoMes;
 
     protected override void OnInitialized()
     {
@@ -623,10 +623,10 @@
         return tipo switch
         {
             TipoEnsaio.Casamento => "#f093fb",
-            TipoEnsaio.Aniversario => "#4facfe",
+            TipoEnsaio.Gestante => "#fa709a",
+            TipoEnsaio.Infantil => "#4facfe",
+            TipoEnsaio.Evento => "#43e97b",
             TipoEnsaio.Retrato => "#667eea",
-            TipoEnsaio.Corporativo => "#43e97b",
-            TipoEnsaio.Outros => "#fa709a",
             _ => "#a0aec0"
         };
     }

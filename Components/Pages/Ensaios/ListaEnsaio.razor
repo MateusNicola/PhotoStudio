@@ -1,11 +1,19 @@
 ﻿@page "/ensaios"
+@using Microsoft.EntityFrameworkCore
+@using PhotoStudio.app.Components.Shared
+@using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
+@using PhotoStudio.app.Services
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
+@inject AppDbContext Db
+@inject ToastService ToastService
 
-<PageTitle>Ensaios</PageTitle>
+<PageTitle>Ensaios - Estúdio de Fotografia</PageTitle>
 
 <div class="page-container">
+    <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Ensaio" Message="Tem certeza que deseja excluir este ensaio?" />
+
     <div class="page-header">
         <h1>Ensaios</h1>
         <p class="subtitle">Gerencie seus ensaios fotográficos</p>
@@ -14,12 +22,17 @@
     <!-- Barra de Ações -->
     <div class="actions-bar">
         <div class="search-box">
-            <input type="text" class="form-control" placeholder="Buscar ensaio..."
-                   @bind="filtroBusca" @bind:event="oninput" />
+            <span class="search-icon">🔍</span>
+            <input type="text"
+                   class="form-control"
+                   placeholder="Buscar por título, tipo ou cliente..."
+                   value="@filtroBusca"
+                   @oninput="OnFiltroChanged" />
         </div>
 
         <button class="btn btn-primary" @onclick="IrParaCriarEnsaio">
-            + Novo Ensaio
+            <span>📸</span>
+            <span>Novo Ensaio</span>
         </button>
     </div>
 
@@ -27,175 +40,395 @@
     <div class="table-container">
         @if (carregando)
         {
-            <div class="loading">Carregando ensaios...</div>
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Carregando ensaios...</p>
+            </div>
         }
         else if (ensaiosFiltrados.Count == 0)
         {
             <div class="empty-message">
-                Nenhum ensaio encontrado.
+                <div class="empty-icon">📷</div>
+                <h3>Nenhum ensaio encontrado</h3>
+                <p>@(string.IsNullOrWhiteSpace(filtroBusca) ? "Comece criando seu primeiro ensaio." : "Tente ajustar os filtros de busca.")</p>
             </div>
         }
         else
         {
-            <table class="styled-table">
-                <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Tipo</th>
-                        <th>Data</th>
-                        <th>Local</th>
-                        <th>Valor</th>
-                        <th>Cliente</th>
-                        <th style="width:120px">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var e in ensaiosFiltrados)
-                    {
+            <div class="table-scroll">
+                <table class="styled-table">
+                    <thead>
                         <tr>
-                            <td>@e.Titulo</td>
-                            <td>@e.Tipo.ToString()</td>
-                            <td>@e.Data.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>@e.Local</td>
-                            <td>@(e.Valor.HasValue? e.Valor.Value.ToString("C") : "-")</td>
-                            <td>@e.ClienteId</td>
-                            <td class="actions-cell">
-                                <button class="icon-btn edit" title="Editar" @onclick="() => Editar(e.Id)">
-                                    ✎
-                                </button>
-                                <button class="icon-btn delete" title="Excluir" @onclick="() => Excluir(e.Id)">
-                                    ✕
-                                </button>
-                            </td>
+                            <th style="width: 25%;">Título</th>
+                            <th style="width: 12%;">Tipo</th>
+                            <th style="width: 13%;">Data</th>
+                            <th style="width: 18%;">Local</th>
+                            <th style="width: 10%;">Valor</th>
+                            <th style="width: 15%;">Cliente</th>
+                            <th style="width: 7%; text-align: center;">Ações</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in ensaiosFiltrados)
+                        {
+                            <tr>
+                                <td class="titulo-cell" title="@e.Titulo">
+                                    <span class="titulo-texto">@e.Titulo</span>
+                                </td>
+                                <td>
+                                    <span class="tipo-badge" style="background: @ObterCorTipo(e.Tipo)">
+                                        @e.Tipo.ToString()
+                                    </span>
+                                </td>
+                                <td class="data-cell">
+                                    <div class="data-info">
+                                        <span class="data">@e.Data.ToString("dd/MM/yyyy")</span>
+                                        <span class="hora">@e.Data.ToString("HH:mm")</span>
+                                    </div>
+                                </td>
+                                <td class="local-cell" title="@e.Local">
+                                    @e.Local
+                                </td>
+                                <td class="valor-cell">
+                                    @(e.Valor.HasValue? e.Valor.Value.ToString("C") : "-")
+                                </td>
+                                <td class="cliente-cell" title="@e.Cliente.Nome">
+                                    @e.Cliente.Nome
+                                </td>
+                                <td class="actions-cell">
+                                    <button class="icon-btn edit" title="Editar" @onclick="() => Editar(e.Id)">
+                                        ✎
+                                    </button>
+                                    <button class="icon-btn delete" title="Excluir" @onclick="() => Excluir(e.Id)">
+                                        ✕
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer">
+                <span>Total: @ensaiosFiltrados.Count ensaio(s)</span>
+            </div>
         }
     </div>
 </div>
 
 <style>
     .page-container {
-        max-width: 1000px;
+        max-width: 1400px;
         margin: 0 auto;
         padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
-    .page-header h1 {
-        font-size: 2.4rem;
-        color: #2d3748;
-        margin-bottom: 5px;
+    .page-header {
+        margin-bottom: 32px;
     }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin: 0 0 8px 0;
+        }
 
     .subtitle {
         color: #718096;
-        margin-bottom: 25px;
+        font-size: 1.1rem;
+        margin: 0;
     }
 
     .actions-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
-        gap: 12px;
+        margin-bottom: 24px;
+        gap: 16px;
         flex-wrap: wrap;
     }
 
     .search-box {
         flex: 1;
-        min-width: 200px;
+        min-width: 250px;
+        max-width: 500px;
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+        font-size: 1rem;
     }
 
     .form-control {
-        padding: 10px 14px;
+        padding: 12px 16px 12px 44px;
         border: 2px solid #e2e8f0;
         border-radius: 8px;
         width: 100%;
         font-size: 1rem;
+        transition: all 0.2s;
     }
 
-    .table-container {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        overflow-x: auto;
-        padding: 10px;
-    }
-
-    .styled-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-        .styled-table th {
-            text-align: left;
-            background: #f7fafc;
-            padding: 12px;
-            font-weight: 600;
-            color: #4a5568;
-            border-bottom: 2px solid #e2e8f0;
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-
-        .styled-table td {
-            padding: 12px;
-            border-bottom: 1px solid #edf2f7;
-            color: #2d3748;
-        }
-
-        .styled-table tr:hover {
-            background: #f7faff;
-        }
-
-    .actions-cell {
-        display: flex;
-        gap: 10px;
-    }
-
-    .icon-btn {
-        border: none;
-        background: none;
-        font-size: 1.1rem;
-        cursor: pointer;
-        padding: 6px;
-        border-radius: 6px;
-        transition: 0.2s;
-    }
-
-        .icon-btn.edit:hover {
-            background: #ebf8ff;
-            color: #3182ce;
-        }
-
-        .icon-btn.delete:hover {
-            background: #fff5f5;
-            color: #e53e3e;
-        }
-
-    .loading,
-    .empty-message {
-        padding: 25px;
-        text-align: center;
-        color: #4a5568;
-        font-size: 1rem;
-    }
 
     .btn {
-        padding: 10px 26px;
+        padding: 12px 24px;
         border-radius: 8px;
         cursor: pointer;
         font-weight: 600;
         border: none;
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-        transition: 0.2s;
+        gap: 8px;
+        transition: all 0.2s;
+        white-space: nowrap;
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .table-scroll {
+        overflow-x: auto;
+    }
+
+    .styled-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+    }
+
+        .styled-table th {
+            text-align: left;
+            background: #f7fafc;
+            padding: 16px 12px;
+            font-weight: 600;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .styled-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid #edf2f7;
+            color: #2d3748;
+            vertical-align: middle;
+        }
+
+        .styled-table tr:hover {
+            background: #f7faff;
+        }
+
+        .styled-table tr:last-child td {
+            border-bottom: none;
+        }
+
+    /* Células específicas com truncamento */
+    .titulo-cell {
+        max-width: 0;
+    }
+
+    .titulo-texto {
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 500;
+    }
+
+    .local-cell,
+    .cliente-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .data-cell {
+        white-space: nowrap;
+    }
+
+    .data-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+        .data-info .data {
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        .data-info .hora {
+            font-size: 0.85rem;
+            color: #718096;
+        }
+
+    .valor-cell {
+        font-weight: 600;
+        color: #38a169;
+        white-space: nowrap;
+    }
+
+    .tipo-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: white;
+        white-space: nowrap;
+    }
+
+    .actions-cell {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .icon-btn {
+        border: none;
+        background: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 6px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .icon-btn.edit {
+            color: #4a5568;
+        }
+
+            .icon-btn.edit:hover {
+                background: #ebf8ff;
+                color: #3182ce;
+            }
+
+        .icon-btn.delete {
+            color: #4a5568;
+        }
+
+            .icon-btn.delete:hover {
+                background: #fff5f5;
+                color: #e53e3e;
+            }
+
+    .table-footer {
+        padding: 16px;
+        background: #f7fafc;
+        border-top: 1px solid #e2e8f0;
+        color: #718096;
+        font-size: 0.9rem;
+        text-align: right;
+    }
+
+    /* Loading State */
+    .loading-container {
+        padding: 60px 32px;
+        text-align: center;
+    }
+
+    .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    /* Empty State */
+    .empty-message {
+        padding: 60px 32px;
+        text-align: center;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+
+    .empty-message h3 {
+        color: #2d3748;
+        font-size: 1.5rem;
+        margin: 0 0 8px 0;
+    }
+
+    .empty-message p {
+        color: #718096;
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    /* Responsivo */
+    @@media (max-width: 1200px) {
+        .styled-table th:nth-child(4),
+        .styled-table td:nth-child(4) {
+            display: none;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .actions-bar {
+            flex-direction: column;
+        }
+
+        .search-box {
+            max-width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .styled-table th:nth-child(3),
+        .styled-table td:nth-child(3),
+        .styled-table th:nth-child(5),
+        .styled-table td:nth-child(5) {
+            display: none;
+        }
     }
 </style>
 
@@ -204,33 +437,43 @@
     private List<EnsaioModel> ensaiosFiltrados = new();
     private bool carregando = true;
     private string filtroBusca = "";
+    private JanelaConfirmacao? janelaConfirmacao;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        CarregarEnsaios();
+        await CarregarEnsaios();
         AplicarFiltro();
     }
 
-    private void CarregarEnsaios()
+    private void OnFiltroChanged(ChangeEventArgs e)
     {
-        // Mock — substitua pela chamada à API
-        var rnd = new Random();
+        filtroBusca = e.Value?.ToString() ?? string.Empty;
+        AplicarFiltro();
+    }
 
-        for (int i = 1; i <= 20; i++)
+    private async Task CarregarEnsaios()
+    {
+        carregando = true;
+        StateHasChanged();
+
+        try
         {
-            ensaios.Add(new EnsaioModel
-            {
-                Id = i,
-                Titulo = $"Ensaio {i}",
-                Tipo = (TipoEnsaio)(i % Enum.GetValues(typeof(TipoEnsaio)).Length),
-                Data = DateTime.Now.AddDays(i),
-                Local = $"Local {i}",
-                Valor = rnd.Next(300, 1500),
-                ClienteId = rnd.Next(1, 10)
-            });
-        }
+            ensaios = await Db.Ensaios
+                .Include(e => e.Cliente)
+                .OrderByDescending(e => e.Data)
+                .ToListAsync();
 
-        carregando = false;
+            ensaiosFiltrados = ensaios.ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao carregar ensaios: {ex.Message}");
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
     }
 
     private void AplicarFiltro()
@@ -238,16 +481,16 @@
         if (string.IsNullOrWhiteSpace(filtroBusca))
         {
             ensaiosFiltrados = ensaios.ToList();
+            return;
         }
-        else
-        {
-            ensaiosFiltrados = ensaios
-                .Where(x =>
-                    x.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
-                    x.Tipo.ToString().Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
-                    x.ClienteId.ToString().Contains(filtroBusca))
-                .ToList();
-        }
+
+        ensaiosFiltrados = ensaios
+            .Where(e =>
+                e.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
+                e.Tipo.ToString().Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
+                (e.Cliente?.Nome?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false)
+            )
+            .ToList();
     }
 
     private void Editar(int id)
@@ -255,15 +498,48 @@
         Navigation.NavigateTo($"/ensaios/editar/{id}");
     }
 
-    private void Excluir(int id)
+    private async Task Excluir(int id)
     {
-        ensaios.RemoveAll(x => x.Id == id);
-        AplicarFiltro();
-        StateHasChanged();
+        if (janelaConfirmacao == null)
+            return;
+
+        bool confirmado = await janelaConfirmacao.Show();
+        if (!confirmado)
+            return;
+
+        try
+        {
+            var ensaio = await Db.Ensaios.FindAsync(id);
+            if (ensaio != null)
+            {
+                Db.Ensaios.Remove(ensaio);
+                await Db.SaveChangesAsync();
+                await CarregarEnsaios();
+                AplicarFiltro();
+                ToastService.Success("Ensaio excluído com sucesso!");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao excluir ensaio: {ex.Message}");
+        }
     }
 
     private void IrParaCriarEnsaio()
     {
         Navigation.NavigateTo("/ensaios/criarEnsaio");
+    }
+
+    private string ObterCorTipo(TipoEnsaio tipo)
+    {
+        return tipo switch
+        {
+            TipoEnsaio.Casamento => "#f093fb",
+            TipoEnsaio.Gestante => "#fa709a",
+            TipoEnsaio.Infantil => "#4facfe",
+            TipoEnsaio.Evento => "#43e97b",
+            TipoEnsaio.Retrato => "#667eea",
+            _ => "#a0aec0"
+        };
     }
 }

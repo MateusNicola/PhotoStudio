@@ -1,233 +1,562 @@
-﻿@page "/ensaios/editar/{Id:int}"
-@using PhotoStudio.app.Models
+﻿@page "/ensaios/editarEnsaio/{EnsaioId:int}"
 @rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PhotoStudio.app.Data
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Services
+@inject AppDbContext DbContext
 @inject NavigationManager Navigation
+@inject ToastService ToastService
 
-<PageTitle>Editar Ensaio</PageTitle>
+<PageTitle>Editar Ensaio - Estúdio de Fotografia</PageTitle>
 
 <div class="page-container">
     <div class="page-header">
-        <h1>Editar Ensaio</h1>
-        <p class="subtitle">Atualize os dados do ensaio fotográfico</p>
+        <div class="header-content">
+            <button class="btn-back" @onclick="Voltar" title="Voltar">
+                <span>←</span>
+            </button>
+            <div>
+                <h1>Editar Ensaio</h1>
+                <p class="subtitle">Atualize os dados do ensaio fotográfico</p>
+            </div>
+        </div>
     </div>
 
     @if (carregando)
     {
-        <div class="loading">Carregando ensaio...</div>
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Carregando dados do ensaio...</p>
+        </div>
     }
     else if (ensaio == null)
     {
-        <div class="empty-message">
-            Ensaio não encontrado.
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h3>Ensaio não encontrado</h3>
+            <p>O ensaio que você está tentando editar não existe.</p>
+            <button class="btn btn-primary" @onclick="Voltar">
+                Voltar para Ensaios
+            </button>
         </div>
     }
     else
     {
         <div class="form-container">
+            <EditForm Model="@ensaio" OnValidSubmit="SalvarEnsaio">
+                <DataAnnotationsValidator />
 
-            <div class="form-group">
-                <label>Título</label>
-                <input class="form-control" @bind="ensaio.Titulo" />
-            </div>
+                <div class="form-grid">
+                    <!-- Título -->
+                    <div class="form-group full-width">
+                        <label for="titulo">Título do Ensaio *</label>
+                        <InputText id="titulo" @bind-Value="ensaio.Titulo"
+                                   class="form-control" placeholder="Ex: Ensaio de Casamento - João e Maria" />
+                        <ValidationMessage For="@(() => ensaio.Titulo)" />
+                    </div>
 
-            <div class="form-group">
-                <label>Tipo de Ensaio</label>
-                <select class="form-control" @bind="ensaio.Tipo">
-                    @foreach (var tipo in Enum.GetValues<TipoEnsaio>())
-                    {
-                        <option value="@tipo">@tipo</option>
-                    }
-                </select>
-            </div>
+                    <!-- Tipo de Ensaio -->
+                    <div class="form-group">
+                        <label for="tipo">Tipo de Ensaio *</label>
+                        <InputSelect id="tipo" @bind-Value="ensaio.Tipo" class="form-control">
+                            @foreach (var tipo in Enum.GetValues<TipoEnsaio>())
+                            {
+                                <option value="@tipo">@tipo</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => ensaio.Tipo)" />
+                    </div>
 
-            <div class="form-group">
-                <label>Data</label>
-                <input type="datetime-local"
-                       class="form-control"
-                       @bind-value="ensaio.Data"
-                       @bind-value:format="yyyy-MM-ddTHH:mm" />
-            </div>
+                    <!-- Cliente -->
+                    <div class="form-group">
+                        <div class="label-with-button">
+                            <label for="cliente">Cliente *</label>
+                        </div>
+                        <select id="cliente" @bind="ensaio.ClienteId" class="form-control">
+                            <option value="0">Selecione o cliente</option>
+                            @foreach (var cliente in clientes)
+                            {
+                                <option value="@cliente.Id">@cliente.Nome</option>
+                            }
+                        </select>
+                        @if (ensaio.ClienteId == 0)
+                        {
+                            <small class="validation-message">O campo Cliente é obrigatório.</small>
+                        }
+                    </div>
 
-            <div class="form-group">
-                <label>Local</label>
-                <input class="form-control" @bind="ensaio.Local" />
-            </div>
+                    <!-- Data -->
+                    <div class="form-group">
+                        <label for="data">Data *</label>
+                        <InputDate id="data" @bind-Value="dataEnsaio" class="form-control" />
+                        <ValidationMessage For="@(() => dataEnsaio)" />
+                    </div>
 
-            <div class="form-group">
-                <label>Valor (R$)</label>
-                <input type="number" step="0.01" class="form-control" @bind="ensaio.Valor" />
-            </div>
+                    <!-- Hora -->
+                    <div class="form-group">
+                        <label for="hora">Horário *</label>
+                        <InputText id="hora" type="time" @bind-Value="horaEnsaio" class="form-control" />
+                        @if (string.IsNullOrEmpty(horaEnsaio))
+                        {
+                            <small class="validation-message">O campo Horário é obrigatório.</small>
+                        }
+                    </div>
 
-            <div class="form-group">
-                <label>Cliente</label>
-                <select class="form-control" @bind="ensaio.ClienteId">
-                    <option value="">Selecione um cliente</option>
-                    @foreach (var cliente in clientes)
-                    {
-                        <option value="@cliente.Id">@cliente.Nome</option>
-                    }
-                </select>
-            </div>
+                    <!-- Local -->
+                    <div class="form-group full-width">
+                        <label for="local">Local *</label>
+                        <InputText id="local" @bind-Value="ensaio.Local"
+                                   class="form-control" placeholder="Ex: Praça da Matriz, Porto Alegre" />
+                        <ValidationMessage For="@(() => ensaio.Local)" />
+                    </div>
 
-            <div class="actions-bar">
-                <button class="btn btn-secondary" @onclick="Voltar">
-                    Cancelar
-                </button>
+                    <!-- Valor -->
+                    <div class="form-group">
+                        <label for="valor">Valor (R$)</label>
+                        <InputNumber id="valor" @bind-Value="ensaio.Valor"
+                                     class="form-control" placeholder="0,00" />
+                        <ValidationMessage For="@(() => ensaio.Valor)" />
+                    </div>
+                </div>
 
-                <button class="btn btn-primary" @onclick="Salvar">
-                    Salvar Alterações
-                </button>
-            </div>
-
+                <!-- Botões de Ação -->
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="Voltar" disabled="@salvando">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" disabled="@salvando">
+                        @if (salvando)
+                        {
+                            <span class="spinner"></span>
+                            <span>Salvando...</span>
+                        }
+                        else
+                        {
+                            <span>💾 Salvar Alterações</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
         </div>
     }
 </div>
 
 <style>
     .page-container {
-        min-height: calc(100vh - 80px);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
+        max-width: 900px;
+        margin: 0 auto;
         padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
     .page-header {
-        text-align: center;
-        margin-bottom: 24px;
+        margin-bottom: 32px;
     }
 
-        .page-header h1 {
-            font-size: 2.2rem;
-            color: #2d3748;
-            margin-bottom: 6px;
+    .header-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .btn-back {
+        background: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #4a5568;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .btn-back:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+            transform: translateX(-4px);
         }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin: 0 0 8px 0;
+    }
 
     .subtitle {
         color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
     }
 
     .form-container {
-        width: 100%;
-        max-width: 600px;
         background: white;
-        padding: 24px;
         border-radius: 12px;
+        padding: 32px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
     }
 
     .form-group {
         display: flex;
         flex-direction: column;
-        margin-bottom: 16px;
     }
 
-        .form-group label {
-            font-weight: 600;
-            color: #4a5568;
-            margin-bottom: 6px;
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+    .label-with-button {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    label {
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0;
+        font-size: 0.95rem;
+    }
+
+    .btn-link {
+        background: none;
+        border: none;
+        color: #667eea;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+        .btn-link:hover {
+            background: #eef2ff;
+            color: #5a67d8;
         }
 
     .form-control {
-        padding: 10px 14px;
+        padding: 12px 16px;
         border: 2px solid #e2e8f0;
         border-radius: 8px;
         font-size: 1rem;
+        transition: all 0.2s;
+        background: white;
+        color: #2d3748;
     }
 
-    .actions-bar {
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-control::placeholder {
+            color: #a0aec0;
+        }
+
+    select.form-control {
+        cursor: pointer;
+    }
+
+    .validation-message {
+        color: #e53e3e;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    .form-actions {
         display: flex;
-        justify-content: flex-end;
         gap: 12px;
-        margin-top: 24px;
+        justify-content: flex-end;
     }
 
     .btn {
-        padding: 10px 26px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
+        padding: 12px 32px;
         border: none;
-        transition: 0.2s;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
     }
 
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
     .btn-secondary {
-        background: #edf2f7;
+        background: #f7fafc;
         color: #4a5568;
+        border: 2px solid #e2e8f0;
     }
 
-    .loading,
-    .empty-message {
-        padding: 25px;
+        .btn-secondary:hover:not(:disabled) {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Loading State */
+    .loading-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         text-align: center;
-        color: #4a5568;
+    }
+
+    .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    .loading-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    /* Error State */
+    .error-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .error-icon {
+        font-size: 4rem;
+        margin-bottom: 16px;
+    }
+
+    .error-container h3 {
+        color: #2d3748;
+        font-size: 1.8rem;
+        margin: 0 0 12px 0;
+    }
+
+    .error-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0 0 24px 0;
+    }
+
+    /* Responsivo */
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group.full-width {
+            grid-column: 1;
+        }
+
+        .form-actions {
+            flex-direction: column-reverse;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .header-content {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-back {
+            align-self: flex-start;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+        }
     }
 </style>
 
 @code {
     [Parameter]
-    public int Id { get; set; }
+    public int EnsaioId { get; set; }
 
     private EnsaioModel? ensaio;
     private List<ClienteModel> clientes = new();
     private bool carregando = true;
+    private bool salvando = false;
+    private DateTime dataEnsaio = DateTime.Today;
+    private string horaEnsaio = "10:00";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        CarregarClientes();
-        CarregarEnsaio();
+        await CarregarClientes();
+        await CarregarEnsaio();
     }
 
-    private void CarregarEnsaio()
+    private async Task CarregarClientes()
     {
-        // Mock — substituir por GET /ensaios/{id}
-        ensaio = new EnsaioModel
-        {
-            Id = Id,
-            Titulo = $"Ensaio {Id}",
-            Tipo = TipoEnsaio.Casamento,
-            Data = DateTime.Now.AddDays(3),
-            Local = "Estúdio Central",
-            Valor = 1200,
-            ClienteId = 1
-        };
-
-        carregando = false;
+        clientes = await DbContext.Clientes
+            .AsNoTracking()
+            .OrderBy(c => c.Nome)
+            .ToListAsync();
     }
 
-    private void CarregarClientes()
+    private async Task CarregarEnsaio()
     {
-        // Mock — substituir futuramente por GET /clientes
-        var rnd = new Random();
+        carregando = true;
+        StateHasChanged();
 
-        for (int i = 1; i <= 10; i++)
+        try
         {
-            clientes.Add(new ClienteModel
+            // Carregar COM tracking para permitir atualização
+            ensaio = await DbContext.Ensaios
+                .FirstOrDefaultAsync(e => e.Id == EnsaioId);
+
+            if (ensaio != null)
             {
-                Id = i,
-                Nome = $"Cliente {i}",
-                Telefone = $"(51) 9{rnd.Next(1000, 9999)}-{rnd.Next(1000, 9999)}",
-                Email = $"cliente{i}@email.com",
-                Endereco = $"Rua {i}, Porto Alegre"
-            });
+                dataEnsaio = ensaio.Data.Date;
+                horaEnsaio = ensaio.Data.ToString("HH:mm");
+            }
+            else
+            {
+                ToastService.Error("Ensaio não encontrado.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao carregar ensaio: {ex.Message}");
+            ensaio = null;
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
         }
     }
 
-    private void Salvar()
+    private async Task SalvarEnsaio()
     {
-        // PUT /ensaios/{id}
-        Navigation.NavigateTo("/ensaios");
+        if (ensaio == null) return;
+
+        // Validações customizadas
+        if (string.IsNullOrWhiteSpace(ensaio.Titulo))
+        {
+            ToastService.Error("O título é obrigatório.");
+            return;
+        }
+
+        if (ensaio.ClienteId == 0)
+        {
+            ToastService.Error("Selecione um cliente.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(ensaio.Local))
+        {
+            ToastService.Error("O local é obrigatório.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(horaEnsaio))
+        {
+            ToastService.Error("O horário é obrigatório.");
+            return;
+        }
+
+        salvando = true;
+        StateHasChanged();
+
+        try
+        {
+            // Atualiza a data combinando data e hora
+            var hora = TimeSpan.Parse(horaEnsaio);
+            ensaio.Data = dataEnsaio.Date.Add(hora);
+
+            // Como a entidade já está sendo rastreada, só precisamos salvar
+            await DbContext.SaveChangesAsync();
+
+            ToastService.Success("Ensaio atualizado com sucesso!");
+
+            // Aguarda antes de navegar
+            await Task.Delay(500);
+
+            // Usa NavigateTo sem forceLoad para evitar NavigationException
+            Navigation.NavigateTo("/ensaios", false);
+        }
+        catch (DbUpdateException ex)
+        {
+            ToastService.Error($"Erro ao salvar no banco de dados: {ex.InnerException?.Message ?? ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao salvar alterações: {ex.Message}");
+        }
+        finally
+        {
+            salvando = false;
+            StateHasChanged();
+        }
     }
 
     private void Voltar()
     {
         Navigation.NavigateTo("/ensaios");
+    }
+
+    private void IrParaCriarCliente()
+    {
+        Navigation.NavigateTo("/clientes/criarCliente");
     }
 }
