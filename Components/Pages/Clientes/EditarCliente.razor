@@ -59,8 +59,12 @@
                     <!-- Telefone -->
                     <div class="form-group">
                         <label for="telefone">Telefone *</label>
-                        <InputText id="telefone" class="form-control" @bind-Value="cliente.Telefone"
-                                   placeholder="(00) 00000-0000" />
+                        <InputText id="telefone"
+                                   class="form-control"
+                                   @bind-Value="cliente.Telefone"
+                                   @oninput="AplicarMascaraTelefone"
+                                   maxlength="14"
+                                   placeholder="(00) 000000000" />
                         <ValidationMessage For="@(() => cliente.Telefone)" />
                     </div>
 
@@ -381,7 +385,6 @@
         try
         {
             cliente = await DbContext.Clientes
-                .AsNoTracking()
                 .FirstOrDefaultAsync(c => c.Id == Id);
 
             if (cliente == null)
@@ -398,6 +401,28 @@
         {
             carregando = false;
             StateHasChanged();
+        }
+    }
+
+    private void AplicarMascaraTelefone(ChangeEventArgs e)
+    {
+        if (cliente == null)
+            return;
+
+        var numeros = new string(e.Value?.ToString()
+            .Where(char.IsDigit)
+            .ToArray());
+
+        if (numeros.Length > 11)
+            numeros = numeros.Substring(0, 11);
+
+        if (numeros.Length <= 2)
+        {
+            cliente.Telefone = $"({numeros}";
+        }
+        else
+        {
+            cliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2)}";
         }
     }
 

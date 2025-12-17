@@ -1,15 +1,19 @@
 ﻿@page "/clientes"
 @rendermode InteractiveServer
 @using Microsoft.EntityFrameworkCore
+@using PhotoStudio.app.Components.Shared
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Data
+@using PhotoStudio.app.Services
 @inject AppDbContext Db
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject ToastService ToastService
 
 <PageTitle>Clientes</PageTitle>
 
 <div class="page-container">
+    <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Cliente" Message="Tem certeza que deseja excluir este cliente?" />
     <div class="page-header">
         <h1>Clientes</h1>
         <p class="subtitle">Gerencie seus clientes cadastrados</p>
@@ -213,6 +217,7 @@
     private List<ClienteModel> clientesFiltrados = new();
     private bool carregando = true;
     private string filtroBusca = "";
+    private JanelaConfirmacao? janelaConfirmacao;
 
     protected override async Task OnInitializedAsync()
     {
@@ -259,18 +264,20 @@
 
     private async Task Excluir(int id)
     {
-        // Exibe a janela de confirmação
-        bool confirmado = await JS.InvokeAsync<bool>("confirm", "Tem certeza que deseja excluir este cliente?");
-        if (!confirmado)
-            return; // Se o usuário cancelar, sai do método
+        if (janelaConfirmacao == null)
+            return;
 
-        // Executa a exclusão
+        bool confirmado = await janelaConfirmacao.Show();
+        if (!confirmado)
+            return;
+
         var cliente = await Db.Clientes.FindAsync(id);
         if (cliente != null)
         {
             Db.Clientes.Remove(cliente);
             await Db.SaveChangesAsync();
-            await CarregarClientes(); // Recarrega a lista
+            await CarregarClientes();
+            ToastService.Success("Cliente excluído com sucesso!");
         }
     }
 }
