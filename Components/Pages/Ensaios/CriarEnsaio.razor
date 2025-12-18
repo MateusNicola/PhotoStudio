@@ -115,7 +115,7 @@
                     }
                     else
                     {
-                        <span>✓ Salvar Ensaio</span>
+                        <span>💾 Salvar Ensaio</span>
                     }
                 </button>
             </div>
@@ -380,7 +380,8 @@
         Tipo = TipoEnsaio.Retrato,
         Local = "",
         Data = DateTime.Now,
-        ClienteId = 0
+        ClienteId = 0,
+        Situacao = Situacao.Agendado
     };
 
     private DateTime dataEnsaio = DateTime.Today;
@@ -445,7 +446,8 @@
             Tipo = TipoEnsaio.Retrato,
             Local = "",
             Data = DateTime.Now,
-            ClienteId = 0
+            ClienteId = 0,
+            Situacao = Situacao.Agendado
         };
         dataEnsaio = DateTime.Today;
         horaEnsaio = "10:00";

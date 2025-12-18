@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PhotoStudio.app.Models
 {
@@ -10,6 +11,7 @@ namespace PhotoStudio.app.Models
         public required DateTime Data { get; set; }
         public required string Local { get; set; }
         public decimal? Valor { get; set; }
+        public required Situacao Situacao { get; set; }
         [Column("cliente_id")]
         public required int ClienteId { get; set; }
         public ClienteModel Cliente { get; set; } = null!;
@@ -22,5 +24,13 @@ namespace PhotoStudio.app.Models
         Gestante = 3,
         Infantil = 4,
         Evento = 5
+    }
+
+    public enum Situacao
+    {
+        Agendado = 1,
+        Confirmado = 2,
+        Concluido = 3,
+        Cancelado = 4
     }
 }

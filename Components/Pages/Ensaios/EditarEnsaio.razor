@@ -118,6 +118,18 @@
                                      class="form-control" placeholder="0,00" />
                         <ValidationMessage For="@(() => ensaio.Valor)" />
                     </div>
+
+                    <!-- Situação -->
+                    <div class="form-group">
+                        <label for="situacao">Situação *</label>
+                        <InputSelect id="situacao" @bind-Value="ensaio.Situacao" class="form-control">
+                            @foreach (var situacao in Enum.GetValues<Situacao>())
+                            {
+                                <option value="@situacao">@situacao</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => ensaio.Situacao)" />
+                    </div>
                 </div>
 
                 <!-- Botões de Ação -->

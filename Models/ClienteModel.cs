@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PhotoStudio.app.Models
 {
@@ -18,5 +19,8 @@ namespace PhotoStudio.app.Models
 
         [Required(ErrorMessage = "Endereço é obrigatório")]
         public string Endereco { get; set; } = string.Empty;
+
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

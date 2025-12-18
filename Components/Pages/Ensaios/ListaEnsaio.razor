@@ -59,41 +59,52 @@
                 <table class="styled-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">Título</th>
-                            <th style="width: 12%;">Tipo</th>
-                            <th style="width: 13%;">Data</th>
-                            <th style="width: 18%;">Local</th>
-                            <th style="width: 10%;">Valor</th>
-                            <th style="width: 15%;">Cliente</th>
-                            <th style="width: 7%; text-align: center;">Ações</th>
+                            <th style="width: 35%;">Informações do Ensaio</th>
+                            <th style="width: 20%;">Data e Hora</th>
+                            <th style="width: 20%;">Local</th>
+                            <th style="width: 12%;">Financeiro</th>
+                            <th style="width: 13%; text-align: center;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var e in ensaiosFiltrados)
                         {
                             <tr>
-                                <td class="titulo-cell" title="@e.Titulo">
-                                    <span class="titulo-texto">@e.Titulo</span>
-                                </td>
                                 <td>
-                                    <span class="tipo-badge" style="background: @ObterCorTipo(e.Tipo)">
-                                        @e.Tipo.ToString()
-                                    </span>
-                                </td>
-                                <td class="data-cell">
-                                    <div class="data-info">
-                                        <span class="data">@e.Data.ToString("dd/MM/yyyy")</span>
-                                        <span class="hora">@e.Data.ToString("HH:mm")</span>
+                                    <div class="info-cell">
+                                        <div class="titulo-row">
+                                            <span class="titulo-principal" title="@e.Titulo">@e.Titulo</span>
+                                            <span class="tipo-badge" style="background: @ObterCorTipo(e.Tipo)">
+                                                @e.Tipo.ToString()
+                                            </span>
+                                        </div>
+                                        <div class="cliente-row">
+                                            <span class="label-icon">👤</span>
+                                            <span class="cliente-nome" title="@e.Cliente.Nome">@e.Cliente.Nome</span>
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="local-cell" title="@e.Local">
-                                    @e.Local
+                                <td>
+                                    <div class="data-info">
+                                        <span class="data">📅 @e.Data.ToString("dd/MM/yyyy")</span>
+                                        <span class="hora">🕐 @e.Data.ToString("HH:mm")</span>
+                                    </div>
                                 </td>
-                                <td class="valor-cell">
-                                    @(e.Valor.HasValue? e.Valor.Value.ToString("C") : "-")
+                                <td>
+                                    <div class="local-info">
+                                        <span class="local-icon">📍</span>
+                                        <span class="local-texto" title="@e.Local">@e.Local</span>
+                                    </div>
                                 </td>
-                                <td class="cliente-cell" title="@e.Cliente.Nome">
-                                    @e.Cliente.Nome
+                                <td>
+                                    <div class="financeiro-cell">
+                                        <span class="valor-texto">
+                                            @(e.Valor.HasValue? e.Valor.Value.ToString("C") : "-")
+                                        </span>
+                                        <span class="situacao-badge" style="background: @ObterCorSituacao(e.Situacao)">
+                                            @e.Situacao.ToString()
+                                        </span>
+                                    </div>
                                 </td>
                                 <td class="actions-cell">
                                     <button class="icon-btn edit" title="Editar" @onclick="() => Editar(e.Id)">
@@ -217,7 +228,6 @@
     .styled-table {
         width: 100%;
         border-collapse: collapse;
-        table-layout: fixed;
     }
 
         .styled-table th {
@@ -232,7 +242,7 @@
         }
 
         .styled-table td {
-            padding: 16px 12px;
+            padding: 14px 12px;
             border-bottom: 1px solid #edf2f7;
             color: #2d3748;
             vertical-align: middle;
@@ -246,39 +256,71 @@
             border-bottom: none;
         }
 
-    /* Células específicas com truncamento */
-    .titulo-cell {
-        max-width: 0;
+    /* Célula de Informações (Título + Cliente + Tipo) */
+    .info-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
 
-    .titulo-texto {
-        display: block;
+    .titulo-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .titulo-principal {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #2d3748;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        font-weight: 500;
+        flex: 1;
+        min-width: 0;
     }
 
-    .local-cell,
-    .cliente-cell {
+    .cliente-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #718096;
+        font-size: 0.9rem;
+    }
+
+    .label-icon {
+        font-size: 0.85rem;
+    }
+
+    .cliente-nome {
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    .data-cell {
+    .tipo-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: white;
         white-space: nowrap;
+        flex-shrink: 0;
     }
 
+    /* Célula de Data */
     .data-info {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
     }
 
         .data-info .data {
             font-weight: 500;
             color: #2d3748;
+            font-size: 0.95rem;
         }
 
         .data-info .hora {
@@ -286,27 +328,52 @@
             color: #718096;
         }
 
-    .valor-cell {
-        font-weight: 600;
-        color: #38a169;
-        white-space: nowrap;
+    /* Célula de Local */
+    .local-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
-    .tipo-badge {
+    .local-icon {
+        font-size: 0.9rem;
+        flex-shrink: 0;
+    }
+
+    .local-texto {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #2d3748;
+    }
+
+    /* Célula Financeira (Valor + Status) */
+    .financeiro-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-start;
+    }
+
+    .valor-texto {
+        font-weight: 600;
+        color: #38a169;
+        font-size: 1rem;
+    }
+
+    .situacao-badge {
         display: inline-block;
-        padding: 4px 12px;
+        padding: 3px 10px;
         border-radius: 20px;
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 600;
         color: white;
         white-space: nowrap;
     }
 
+    /* Ações */
     .actions-cell {
-        display: flex;
-        gap: 8px;
-        justify-content: center;
-        align-items: center;
+        text-align: center;
     }
 
     .icon-btn {
@@ -317,9 +384,10 @@
         padding: 8px;
         border-radius: 6px;
         transition: all 0.2s;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
+        margin: 0 4px;
     }
 
         .icon-btn.edit {
@@ -402,10 +470,19 @@
     }
 
     /* Responsivo */
-    @@media (max-width: 1200px) {
-        .styled-table th:nth-child(4),
-        .styled-table td:nth-child(4) {
-            display: none;
+    @@media (max-width: 1024px) {
+        .styled-table {
+            font-size: 0.9rem;
+        }
+
+        .titulo-principal {
+            font-size: 0.95rem;
+        }
+
+        .tipo-badge,
+        .situacao-badge {
+            font-size: 0.7rem;
+            padding: 3px 8px;
         }
     }
 
@@ -424,10 +501,18 @@
         }
 
         .styled-table th:nth-child(3),
-        .styled-table td:nth-child(3),
-        .styled-table th:nth-child(5),
-        .styled-table td:nth-child(5) {
+        .styled-table td:nth-child(3) {
             display: none;
+        }
+
+        .info-cell {
+            gap: 6px;
+        }
+
+        .titulo-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
         }
     }
 </style>
@@ -495,7 +580,7 @@
 
     private void Editar(int id)
     {
-        Navigation.NavigateTo($"/ensaios/editar/{id}");
+        Navigation.NavigateTo($"/ensaios/editarEnsaio/{id}");
     }
 
     private async Task Excluir(int id)
@@ -539,6 +624,18 @@
             TipoEnsaio.Infantil => "#4facfe",
             TipoEnsaio.Evento => "#43e97b",
             TipoEnsaio.Retrato => "#667eea",
+            _ => "#a0aec0"
+        };
+    }
+
+    private string ObterCorSituacao(Situacao situacao)
+    {
+        return situacao switch
+        {
+            Situacao.Cancelado => "#e53e3e",
+            Situacao.Concluido => "#38a169",
+            Situacao.Agendado => "#3182ce",
+            Situacao.Confirmado => "#d69e2e",
             _ => "#a0aec0"
         };
     }

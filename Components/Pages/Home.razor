@@ -1,12 +1,28 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
+@using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
 @inject NavigationManager Navigation
+@inject AppDbContext Db
+@inject IJSRuntime JS
 
 <PageTitle>Dashboard - Estúdio de Fotografia</PageTitle>
 
 <div class="dashboard-container">
+    <!-- Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Dashboard</h1>
+            <p class="dashboard-subtitle">Visão geral do seu estúdio</p>
+        </div>
+        <button class="btn-criar-ensaio" @onclick="CriarNovoEnsaio">
+            <span class="btn-icon">📸</span>
+            <span>Novo Ensaio</span>
+        </button>
+    </div>
+
     <!-- Cards de Estatísticas -->
     <div class="cards-grid">
         <div class="stat-card">
@@ -37,68 +53,80 @@
             </div>
             <div class="stat-content">
                 <h3>Faturamento</h3>
-                <p class="stat-number">R$ @faturamentoMes.ToString("N2")</p>
+                <p class="stat-number">@faturamentoMes.ToString("C")</p>
                 <small>No mês atual</small>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <span>✅</span>
+            </div>
+            <div class="stat-content">
+                <h3>Ensaios Concluídos</h3>
+                <p class="stat-number">@ensaiosConcluidosMes</p>
+                <small>Este mês</small>
             </div>
         </div>
     </div>
 
-    <!-- Calendário -->
-    <div class="calendar-container">
-        <div class="calendar-header">
-            <button class="nav-btn" @onclick="MesAnterior">‹</button>
-            <h2>@dataAtual.ToString("MMMM yyyy")</h2>
-            <button class="nav-btn" @onclick="ProximoMes">›</button>
-        </div>
+    <!-- Grid: Calendário + Próximos Ensaios -->
+    <div class="content-grid">
+        <!-- Calendário -->
+        <div class="calendar-section">
+            <div class="section-card">
+                <div class="calendar-header">
+                    <button class="nav-btn" @onclick="MesAnterior">‹</button>
+                    <h2 class="calendar-title">@dataAtual.ToString("MMMM yyyy")</h2>
+                    <button class="nav-btn" @onclick="ProximoMes">›</button>
+                </div>
 
-        <div class="calendar">
-            <div class="calendar-weekdays">
-                <div class="weekday">Dom</div>
-                <div class="weekday">Seg</div>
-                <div class="weekday">Ter</div>
-                <div class="weekday">Qua</div>
-                <div class="weekday">Qui</div>
-                <div class="weekday">Sex</div>
-                <div class="weekday">Sáb</div>
-            </div>
+                <div class="calendar">
+                    <div class="calendar-weekdays">
+                        <div class="weekday">Dom</div>
+                        <div class="weekday">Seg</div>
+                        <div class="weekday">Ter</div>
+                        <div class="weekday">Qua</div>
+                        <div class="weekday">Qui</div>
+                        <div class="weekday">Sex</div>
+                        <div class="weekday">Sáb</div>
+                    </div>
 
-            <div class="calendar-days">
-                @foreach (var dia in ObterDiasCalendario())
-                {
-                    var ensaiosDoDia = ObterEnsaiosDoDia(dia);
-                    var isOutroMes = dia.Month != dataAtual.Month;
-                    var isHoje = dia.Date == DateTime.Today;
-
-                    <div class="calendar-day @(isOutroMes ? "outro-mes" : "") @(isHoje ? "hoje" : "")"
-                         @onclick="() => SelecionarDia(dia)">
-                        <span class="day-number">@dia.Day</span>
-                        @if (ensaiosDoDia.Any())
+                    <div class="calendar-days">
+                        @foreach (var dia in ObterDiasCalendario())
                         {
-                            <div class="ensaios-preview">
-                                @foreach (var ensaio in ensaiosDoDia.Take(2))
-                                {
-                                    <div class="ensaio-preview"
-                                            style="border-left: 4px solid @ObterCorTipo(ensaio.Tipo)"
-                                            title="@ensaio.Titulo">
-                                        <span class="ensaio-hora-mini">
-                                            @ensaio.Data.ToString("HH:mm")
-                                        </span>
-                                        <span class="ensaio-titulo-mini">
-                                            @ensaio.Titulo
-                                        </span>
-                                    </div>
-                                }
+                            var ensaiosDoDia = ObterEnsaiosDoDia(dia);
+                            var isHoje = dia.Date == DateTime.Today;
+                            var isSelecionado = diaSelecionado.HasValue && diaSelecionado.Value.Date == dia.Date;
 
-                                @if (ensaiosDoDia.Count > 2)
+                            <div class="calendar-day @(isHoje ? "hoje" : "") @(isSelecionado ? "selecionado" : "")"
+                                 @onclick="() => SelecionarDia(dia)">
+                                <span class="day-number">@dia.Day</span>
+
+                                @if (ensaiosDoDia.Any())
                                 {
-                                    <div class="mais-ensaios-badge">
-                                        +@(ensaiosDoDia.Count - 2)
+                                    <div class="ensaios-lista">
+                                        @foreach (var ensaio in ensaiosDoDia.Take(2))
+                                        {
+                                            <div class="ensaio-badge"
+                                                 style="border-left-color:@ObterCorTipo(ensaio.Tipo)">
+                                                @ensaio.Titulo
+                                            </div>
+                                        }
+
+                                        @if (ensaiosDoDia.Count > 2)
+                                        {
+                                            <div class="ensaio-mais">
+                                                +@(ensaiosDoDia.Count - 2)
+                                            </div>
+                                        }
                                     </div>
                                 }
                             </div>
                         }
+
                     </div>
-                }
+                </div>
             </div>
         </div>
     </div>
@@ -108,34 +136,54 @@
     {
         var ensaiosDia = ObterEnsaiosDoDia(diaSelecionado.Value);
         <div class="detalhes-dia" @ref="detalhesDiaRef">
-            <h3>Ensaios em @diaSelecionado.Value.ToString("dd/MM/yyyy")</h3>
+            <div class="detalhes-header">
+                <h3>
+                    Ensaios em @diaSelecionado.Value.ToString("dd/MM/yyyy")
+                    <small style="color:#718096; font-weight:500;">
+                        (@ensaiosDia.Count)
+                    </small>
+                </h3>
+
+                <button class="btn-fechar" @onclick="FecharDetalhes">✕</button>
+            </div>
+
             @if (ensaiosDia.Any())
             {
                 <div class="lista-ensaios">
                     @foreach (var ensaio in ensaiosDia.OrderBy(e => e.Data))
                     {
                         var cliente = clientes.FirstOrDefault(c => c.Id == ensaio.ClienteId);
-                        <div class="ensaio-item">
+                        <div class="ensaio-item" @onclick="() => EditarEnsaio(ensaio.Id)">
                             <div class="ensaio-header">
-                                <span class="tipo-badge" style="background: @ObterCorTipo(ensaio.Tipo)">
-                                    @ensaio.Tipo
-                                </span>
-                                <span class="ensaio-hora">@ensaio.Data.ToString("HH:mm")</span>
+                                <div class="header-left">
+                                    <span class="tipo-badge" style="background: @ObterCorTipo(ensaio.Tipo)">
+                                        @ensaio.Tipo
+                                    </span>
+                                    <span class="situacao-badge" style="background: @ObterCorSituacao(ensaio.Situacao)">
+                                        @ensaio.Situacao
+                                    </span>
+                                </div>
+                                <span class="ensaio-hora">🕐 @ensaio.Data.ToString("HH:mm")</span>
                             </div>
                             <h4>@ensaio.Titulo</h4>
-                            <p><strong>Cliente:</strong> @(cliente?.Nome ?? "N/A")</p>
-                            <p><strong>Local:</strong> @ensaio.Local</p>
-                            @if (ensaio.Valor.HasValue)
-                            {
-                                <p><strong>Valor:</strong> R$ @ensaio.Valor.Value.ToString("N2")</p>
-                            }
+                            <div class="ensaio-detalhes">
+                                <p><strong>👤 Cliente:</strong> @(cliente?.Nome ?? "N/A")</p>
+                                <p><strong>📍 Local:</strong> @ensaio.Local</p>
+                                @if (ensaio.Valor.HasValue)
+                                {
+                                    <p><strong>💰 Valor:</strong> @ensaio.Valor.Value.ToString("C")</p>
+                                }
+                            </div>
                         </div>
                     }
                 </div>
             }
             else
             {
-                <p class="sem-ensaios">Nenhum ensaio agendado para este dia.</p>
+                <div class="empty-state">
+                    <span class="empty-icon">📷</span>
+                    <p>Nenhum ensaio agendado para este dia</p>
+                </div>
             }
         </div>
     }
@@ -145,203 +193,242 @@
     .dashboard-container {
         max-width: 1400px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 16px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
+    /* Header */
     .dashboard-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 30px;
+        margin-bottom: 20px;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 12px;
     }
 
     .dashboard-title {
-        font-size: 2.5rem;
-        margin: 0;
+        font-size: 2rem;
+        margin: 0 0 2px 0;
         color: #2d3748;
+    }
+
+    .dashboard-subtitle {
+        color: #718096;
+        font-size: 0.95rem;
+        margin: 0;
     }
 
     .btn-criar-ensaio {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
-        padding: 14px 28px;
-        border-radius: 10px;
+        padding: 12px 24px;
+        border-radius: 8px;
         font-size: 1rem;
         font-weight: 600;
         cursor: pointer;
         display: flex;
         align-items: center;
-        gap: 10px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        gap: 8px;
+        transition: all 0.2s;
     }
 
-        .btn-criar-ensaio:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-criar-ensaio:active {
-            transform: translateY(0);
-        }
+    .btn-criar-ensaio:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
 
     .btn-icon {
         font-size: 1.2rem;
     }
 
+    /* Cards Grid */
     .cards-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
-        margin-bottom: 40px;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
     }
 
     .stat-card {
         background: white;
-        border-radius: 12px;
-        padding: 24px;
+        border-radius: 10px;
+        padding: 16px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         display: flex;
-        gap: 20px;
-        transition: transform 0.2s, box-shadow 0.2s;
+        gap: 12px;
+        transition: all 0.2s;
     }
 
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-        }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
 
     .stat-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 12px;
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
+        font-size: 20px;
         flex-shrink: 0;
     }
 
-    .stat-content {
-        flex: 1;
+    .stat-content h3 {
+        margin: 0 0 6px 0;
+        font-size: 0.8rem;
+        color: #718096;
+        font-weight: 500;
     }
 
-        .stat-content h3 {
-            margin: 0 0 8px 0;
-            font-size: 0.9rem;
-            color: #718096;
-            font-weight: 500;
-        }
-
     .stat-number {
-        font-size: 2rem;
+        font-size: 1.5rem;
         font-weight: 700;
         color: #2d3748;
-        margin: 0 0 4px 0;
+        margin: 0 0 2px 0;
     }
 
     .stat-content small {
         color: #a0aec0;
-        font-size: 0.85rem;
+        font-size: 0.75rem;
     }
 
-    .calendar-container {
+    /* Content Grid */
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 24px;
+        min-height: calc(100vh - 280px); /* ajusta conforme header + cards */
+    }
+
+    .section-card {
         background: white;
-        border-radius: 12px;
-        padding: 24px;
+        border-radius: 10px;
+        padding: 20px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        margin-bottom: 30px;
     }
 
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 16px 0;
+        color: #2d3748;
+        font-size: 1.15rem;
+    }
+
+    .title-icon {
+        font-size: 1.2rem;
+    }
+
+    /* Calendário */
     .calendar-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 24px;
+        margin-bottom: 16px;
     }
 
-        .calendar-header h2 {
-            margin: 0;
-            font-size: 1.5rem;
-            color: #2d3748;
-            text-transform: capitalize;
-        }
+    .calendar-title {
+        margin: 0;
+        font-size: 1.15rem;
+        color: #2d3748;
+        text-transform: capitalize;
+    }
 
     .nav-btn {
         background: #f7fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        width: 40px;
-        height: 40px;
-        font-size: 1.5rem;
+        border-radius: 6px;
+        width: 36px;
+        height: 36px;
+        font-size: 1.3rem;
         cursor: pointer;
         transition: all 0.2s;
         color: #4a5568;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-        .nav-btn:hover {
-            background: #edf2f7;
-            border-color: #cbd5e0;
-        }
+    .nav-btn:hover {
+        background: #edf2f7;
+        border-color: #cbd5e0;
+    }
 
     .calendar-weekdays {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 8px;
-        margin-bottom: 8px;
+        gap: 4px;
+        margin-bottom: 6px;
     }
 
     .weekday {
         text-align: center;
         font-weight: 600;
         color: #718096;
-        font-size: 0.85rem;
-        padding: 8px;
+        font-size: 0.8rem;
+        padding: 6px;
     }
 
     .calendar-days {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 8px;
+        gap: 4px;
+        flex: 1;
     }
 
     .calendar-day {
         aspect-ratio: 1;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 8px;
+        border-radius: 6px;
+        padding: 3px;
         cursor: pointer;
         transition: all 0.2s;
-        position: relative;
         display: flex;
         flex-direction: column;
         background: white;
+        min-height: 42px;
     }
 
-        .calendar-day:hover {
-            border-color: #667eea;
-            background: #f7fafc;
-            transform: scale(1.05);
-        }
+    .calendar-day:hover:not(.outro-mes) {
+        border-color: #667eea;
+        background: #f7fafc;
+        transform: scale(1.03);
+    }
 
-        .calendar-day.outro-mes {
-            opacity: 0.3;
-        }
+    .calendar-day.outro-mes {
+        opacity: 0.3;
+        cursor: default;
+    }
 
-        .calendar-day.hoje {
-            border-color: #667eea;
-            border-width: 2px;
-            background: #eef2ff;
-        }
+    .calendar-day.outro-mes:hover {
+        transform: none;
+    }
+
+    .calendar-day.hoje {
+        border-color: #667eea;
+        border-width: 2px;
+        background: #eef2ff;
+    }
+
+    .calendar-day.selecionado {
+        background: #667eea;
+        border-color: #667eea;
+    }
+
+    .calendar-day.selecionado .day-number {
+        color: white;
+    }
 
     .day-number {
         font-weight: 600;
         color: #2d3748;
-        font-size: 0.9rem;
+        font-size: 0.75rem;
     }
 
     .ensaios-indicators {
@@ -353,17 +440,99 @@
     }
 
     .ensaio-dot {
-        width: 6px;
-        height: 6px;
+        width: 4px;
+        height: 4px;
         border-radius: 50%;
     }
 
     .mais-ensaios {
-        font-size: 0.7rem;
+        font-size: 0.6rem;
         color: #718096;
         font-weight: 600;
     }
 
+    /* Próximos Ensaios */
+    .lista-ensaios-compacta {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .ensaio-compacto {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 10px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .ensaio-compacto-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .ensaio-titulo {
+        margin: 0 0 8px 0;
+        color: #2d3748;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .ensaio-info-row {
+        display: flex;
+        gap: 12px;
+        margin: 4px 0;
+        flex-wrap: wrap;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.85rem;
+        color: #4a5568;
+    }
+
+    .info-icon {
+        font-size: 0.85rem;
+    }
+
+    .tipo-badge {
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: white;
+        white-space: nowrap;
+    }
+
+    .dias-badge {
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: #edf2f7;
+        color: #4a5568;
+    }
+
+    .dias-badge.urgente {
+        background: #fed7d7;
+        color: #c53030;
+    }
+
+    .situacao-badge {
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: white;
+    }
+
+    /* Detalhes do Dia */
     .detalhes-dia {
         background: white;
         border-radius: 12px;
@@ -371,9 +540,34 @@
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
-        .detalhes-dia h3 {
-            margin: 0 0 20px 0;
+    .detalhes-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+        .detalhes-header h3 {
+            margin: 0;
             color: #2d3748;
+        }
+
+    .btn-fechar {
+        background: #f7fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #718096;
+        font-size: 1.2rem;
+    }
+
+        .btn-fechar:hover {
+            background: #fee;
+            border-color: #fcc;
+            color: #e53e3e;
         }
 
     .lista-ensaios {
@@ -385,12 +579,13 @@
         border: 1px solid #e2e8f0;
         border-radius: 8px;
         padding: 16px;
+        cursor: pointer;
         transition: all 0.2s;
     }
 
         .ensaio-item:hover {
-            border-color: #cbd5e0;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
         }
 
     .ensaio-header {
@@ -400,17 +595,16 @@
         margin-bottom: 12px;
     }
 
-    .tipo-badge {
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: white;
+    .header-left {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
     }
 
     .ensaio-hora {
         color: #718096;
         font-weight: 600;
+        font-size: 0.9rem;
     }
 
     .ensaio-item h4 {
@@ -418,70 +612,105 @@
         color: #2d3748;
     }
 
-    .ensaio-item p {
+    .ensaio-detalhes p {
         margin: 6px 0;
         color: #4a5568;
         font-size: 0.9rem;
     }
 
-    .sem-ensaios {
+    /* Empty State */
+    .empty-state {
         text-align: center;
+        padding: 40px 20px;
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        opacity: 0.3;
+        display: block;
+        margin-bottom: 12px;
+    }
+
+    .empty-state p {
         color: #a0aec0;
-        padding: 40px;
+        margin: 0;
     }
 
-    .ensaios-preview {
-        margin-top: 6px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .ensaio-preview {
-        background: rgba(102, 126, 234, 0.08);
-        border-radius: 6px;
-        padding: 4px 6px;
-        font-size: 0.7rem;
-        line-height: 1.2;
-        overflow: hidden;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        cursor: pointer;
-        transition: 0.2s;
-    }
-
-        .ensaio-preview:hover {
-            background: rgba(102, 126, 234, 0.15);
+    /* Responsivo */
+    @@media (max-width: 1024px) {
+        .content-grid {
+            grid-template-columns: 1fr;
         }
 
-    .ensaio-hora-mini {
-        font-weight: 700;
-        color: #4a5568;
-        margin-right: 4px;
+        .cards-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
 
-    .ensaio-titulo-mini {
-        color: #2d3748;
+    @@media (max-width: 640px) {
+        .dashboard-title {
+            font-size: 2rem;
+        }
+
+        .cards-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .calendar-day {
+            min-height: 50px;
+        }
+
+        .day-number {
+            font-size: 0.75rem;
+        }
     }
 
-    /* Badge de mais ensaios */
-    .mais-ensaios-badge {
+    .ensaios-lista {
+        margin-top: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .ensaio-badge {
         font-size: 0.65rem;
-        font-weight: 600;
-        color: #4a5568;
-        background: #edf2f7;
-        border-radius: 10px;
-        padding: 2px 6px;
-        align-self: flex-start;
+        padding: 3px 6px;
+        background: #f9fafb;
+        border-radius: 4px;
+        border-left: 4px solid;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        color: #2d3748;
+        font-weight: 500;
     }
 
-    /* ====== DIA SELECIONADO ====== */
 
-    .calendar-day.selecionado {
-        border: 2px solid #667eea;
-        background: #eef2ff;
-        transform: scale(1.06);
+    .ensaio-mais {
+        font-size: 0.65rem;
+        color: #666;
+        padding-left: 6px;
     }
+
+    .calendar-section .section-card {
+        border: 2px solid #edf2f7;
+    }
+
+    .detalhes-dia {
+        border-left: 6px solid #667eea;
+    }
+
+    .calendar-section,
+    .calendar-section .section-card {
+        height: 100%;
+    }
+
+        .calendar-section .section-card {
+            display: flex;
+            flex-direction: column;
+        }
+
 </style>
 
 <script>
@@ -497,97 +726,62 @@
     private DateTime? diaSelecionado;
     private ElementReference detalhesDiaRef;
 
-    [Inject]
-    private IJSRuntime JSRuntime { get; set; } = default!;
-
-    // Dados simulados - substitua pelos seus dados reais
     private List<EnsaioModel> ensaios = new();
     private List<ClienteModel> clientes = new();
 
     private int ensaiosMes;
     private int clientesNovosMes;
     private decimal faturamentoMes;
+    private int ensaiosConcluidosMes;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Dados simulados - substitua pela sua lógica de acesso a dados
-        GerarDadosSimulados();
-        CalcularEstatisticas();
+        await CarregarDashboard();
     }
 
-    private void GerarDadosSimulados()
-    {
-        var random = new Random();
-
-        // Clientes simulados
-        for (int i = 1; i <= 15; i++)
-        {
-            clientes.Add(new ClienteModel
-            {
-                Id = i,
-                Nome = $"Cliente {i}",
-                Telefone = $"(51) 9{random.Next(1000, 9999)}-{random.Next(1000, 9999)}",
-                Email = $"cliente{i}@email.com",
-                Endereco = $"Rua {i}, Alvorada - RS"
-            });
-        }
-
-        // Ensaios simulados
-        var hoje = DateTime.Now;
-        var tiposEnsaio = Enum.GetValues<TipoEnsaio>();
-
-        for (int i = 0; i < 25; i++)
-        {
-            var diasOffset = random.Next(-15, 30);
-            var data = hoje.AddDays(diasOffset).Date.AddHours(random.Next(8, 18));
-
-            ensaios.Add(new EnsaioModel
-            {
-                Id = i + 1,
-                Titulo = $"Ensaio {i + 1}",
-                Tipo = tiposEnsaio[random.Next(tiposEnsaio.Length)],
-                Data = data,
-                Local = $"Local {random.Next(1, 6)}",
-                Valor = random.Next(300, 2000),
-                ClienteId = random.Next(1, clientes.Count + 1)
-            });
-        }
-    }
-
-    private void CalcularEstatisticas()
+    private async Task CarregarDashboard()
     {
         var inicioMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
         var fimMes = inicioMes.AddMonths(1).AddDays(-1);
 
-        ensaiosMes = ensaios.Count(e => e.Data >= inicioMes && e.Data <= fimMes);
-        clientesNovosMes = random.Next(3, 12); // Simula novos clientes
+        // Clientes
+        clientes = await Db.Clientes.ToListAsync();
+
+        clientesNovosMes = await Db.Clientes
+            .CountAsync(c => c.CreatedAt >= inicioMes && c.CreatedAt <= fimMes);
+
+        // Ensaios
+        ensaios = await Db.Ensaios
+            .Include(e => e.Cliente)
+            .ToListAsync();
+
+        ensaiosMes = ensaios
+            .Count(e => e.Data >= inicioMes && e.Data <= fimMes);
+
+        ensaiosConcluidosMes = ensaios
+            .Count(e => e.Data >= inicioMes && e.Data <= fimMes && e.Situacao == Situacao.Concluido);
+
         faturamentoMes = ensaios
-            .Where(e => e.Data >= inicioMes && e.Data <= fimMes && e.Valor.HasValue)
+            .Where(e => e.Data >= inicioMes && e.Data <= fimMes && e.Valor.HasValue && e.Situacao == Situacao.Concluido)
             .Sum(e => e.Valor ?? 0);
     }
-
-    private Random random = new Random();
 
     private List<DateTime> ObterDiasCalendario()
     {
         var primeiroDiaMes = new DateTime(dataAtual.Year, dataAtual.Month, 1);
-        var ultimoDiaMes = primeiroDiaMes.AddMonths(1).AddDays(-1);
+        var totalDias = DateTime.DaysInMonth(dataAtual.Year, dataAtual.Month);
 
-        var primeiroDiaSemana = (int)primeiroDiaMes.DayOfWeek;
-        var inicioDias = primeiroDiaMes.AddDays(-primeiroDiaSemana);
-
-        var dias = new List<DateTime>();
-        for (int i = 0; i < 42; i++)
-        {
-            dias.Add(inicioDias.AddDays(i));
-        }
-
-        return dias;
+        return Enumerable
+            .Range(0, totalDias)
+            .Select(i => primeiroDiaMes.AddDays(i))
+            .ToList();
     }
 
     private List<EnsaioModel> ObterEnsaiosDoDia(DateTime dia)
     {
-        return ensaios.Where(e => e.Data.Date == dia.Date).ToList();
+        return ensaios
+            .Where(e => e.Data.Date == dia.Date)
+            .ToList();
     }
 
     private void MesAnterior()
@@ -602,20 +796,35 @@
         diaSelecionado = null;
     }
 
-    private void SelecionarDia(DateTime dia)
+    private async Task SelecionarDia(DateTime dia)
     {
-        diaSelecionado = dia;
-        StateHasChanged();
+        // Não seleciona dias de outro mês
+        if (dia.Month != dataAtual.Month)
+            return;
 
-        // Aguarda o elemento ser renderizado e então scrolla
-        Task.Run(async () =>
+        diaSelecionado = dia;
+
+        await Task.Delay(50);
+
+        if (detalhesDiaRef.Context != null)
         {
-            await Task.Delay(100);
-            await InvokeAsync(async () =>
-            {
-                await JSRuntime.InvokeVoidAsync("scrollToElement", detalhesDiaRef);
-            });
-        });
+            await JS.InvokeVoidAsync("scrollToElement", detalhesDiaRef);
+        }
+    }
+
+    private void FecharDetalhes()
+    {
+        diaSelecionado = null;
+    }
+
+    private void CriarNovoEnsaio()
+    {
+        Navigation.NavigateTo("/ensaios/criarEnsaio");
+    }
+
+    private void EditarEnsaio(int id)
+    {
+        Navigation.NavigateTo($"/ensaios/editarEnsaio/{id}");
     }
 
     private string ObterCorTipo(TipoEnsaio tipo)
@@ -627,6 +836,18 @@
             TipoEnsaio.Infantil => "#4facfe",
             TipoEnsaio.Evento => "#43e97b",
             TipoEnsaio.Retrato => "#667eea",
+            _ => "#a0aec0"
+        };
+    }
+
+    private string ObterCorSituacao(Situacao situacao)
+    {
+        return situacao switch
+        {
+            Situacao.Cancelado => "#e53e3e",
+            Situacao.Concluido => "#38a169",
+            Situacao.Agendado => "#3182ce",
+            Situacao.Confirmado => "#d69e2e",
             _ => "#a0aec0"
         };
     }

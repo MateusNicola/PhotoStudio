@@ -58,23 +58,42 @@
                 <table class="styled-table">
                     <thead>
                         <tr>
-                            <th>Nome</th>
-                            <th>Telefone</th>
-                            <th>Email</th>
-                            <th>Endereço</th>
-                            <th style="width: 7%; text-align: center;">Ações</th>
+                            <th style="width: 30%;">Informações Pessoais</th>
+                            <th style="width: 25%;">Contato</th>
+                            <th style="width: 35%;">Endereço</th>
+                            <th style="width: 10%; text-align: center;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var c in clientesFiltrados)
                         {
                             <tr>
-                                <td class="nome-cell" title="@c.Nome">
-                                    <span class="nome-texto">@c.Nome</span>
+                                <td>
+                                    <div class="info-pessoal">
+                                        <div class="nome-row">
+                                            <span class="avatar-icon">👤</span>
+                                            <span class="nome-principal" title="@c.Nome">@c.Nome</span>
+                                        </div>
+                                    </div>
                                 </td>
-                                <td>@c.Telefone</td>
-                                <td class="email-cell" title="@c.Email">@c.Email</td>
-                                <td class="endereco-cell" title="@c.Endereco">@c.Endereco</td>
+                                <td>
+                                    <div class="contato-cell">
+                                        <div class="contato-item">
+                                            <span class="contato-icon">📞</span>
+                                            <span class="contato-texto">@c.Telefone</span>
+                                        </div>
+                                        <div class="contato-item">
+                                            <span class="contato-icon">✉️</span>
+                                            <span class="contato-texto email-texto" title="@c.Email">@c.Email</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="endereco-info">
+                                        <span class="endereco-icon">📍</span>
+                                        <span class="endereco-texto" title="@c.Endereco">@c.Endereco</span>
+                                    </div>
+                                </td>
                                 <td class="actions-cell">
                                     <button class="icon-btn edit" title="Editar" @onclick="() => Editar(c.Id)">✎</button>
                                     <button class="icon-btn delete" title="Excluir" @onclick="() => Excluir(c.Id)">✕</button>
@@ -93,8 +112,6 @@
 </div>
 
 <style>
-    /* ======== MESMO CSS DA PÁGINA DE ENSAIOS ======== */
-
     .page-container {
         max-width: 1400px;
         margin: 0 auto;
@@ -195,7 +212,6 @@
     .styled-table {
         width: 100%;
         border-collapse: collapse;
-        table-layout: fixed;
     }
 
         .styled-table th {
@@ -210,7 +226,7 @@
         }
 
         .styled-table td {
-            padding: 16px 12px;
+            padding: 14px 12px;
             border-bottom: 1px solid #edf2f7;
             color: #2d3748;
             vertical-align: middle;
@@ -220,26 +236,101 @@
             background: #f7faff;
         }
 
-    /* Células específicas com truncamento */
-    .nome-cell, .email-cell, .endereco-cell {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+        .styled-table tr:last-child td {
+            border-bottom: none;
+        }
 
-    .nome-texto {
-        display: block;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 500;
-    }
-
-    .actions-cell {
+    /* Célula de Informações Pessoais */
+    .info-pessoal {
         display: flex;
-        gap: 8px;
-        justify-content: center;
+        flex-direction: column;
+    }
+
+    .nome-row {
+        display: flex;
         align-items: center;
+        gap: 10px;
+    }
+
+    .avatar-icon {
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    .nome-principal {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #2d3748;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* Célula de Contato */
+    .contato-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .contato-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .contato-icon {
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        opacity: 0.7;
+    }
+
+    .contato-texto {
+        color: #2d3748;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .email-texto {
+        color: #3182ce;
+        text-decoration: none;
+    }
+
+    /* Célula de Endereço */
+    .endereco-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .endereco-icon {
+        font-size: 0.9rem;
+        flex-shrink: 0;
+        opacity: 0.7;
+    }
+
+    .endereco-texto {
+        color: #2d3748;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Ações */
+    .actions-cell {
+        text-align: center;
     }
 
     .icon-btn {
@@ -250,9 +341,10 @@
         padding: 8px;
         border-radius: 6px;
         transition: all 0.2s;
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
+        margin: 0 4px;
     }
 
         .icon-btn.edit {
@@ -282,8 +374,8 @@
         text-align: right;
     }
 
-    /* Loading e Empty State */
-    .loading-container, .empty-message {
+    /* Loading State */
+    .loading-container {
         padding: 60px 32px;
         text-align: center;
     }
@@ -304,6 +396,18 @@
         }
     }
 
+    .loading-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    /* Empty State */
+    .empty-message {
+        padding: 60px 32px;
+        text-align: center;
+    }
+
     .empty-icon {
         font-size: 4rem;
         margin-bottom: 16px;
@@ -321,37 +425,105 @@
         font-size: 1rem;
         margin: 0;
     }
+
+    /* Responsivo */
+    @@media (max-width: 1024px) {
+        .styled-table {
+            font-size: 0.9rem;
+        }
+
+        .nome-principal {
+            font-size: 0.95rem;
+        }
+
+        .contato-texto {
+            font-size: 0.85rem;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .actions-bar {
+            flex-direction: column;
+        }
+
+        .search-box {
+            max-width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .styled-table th:nth-child(3),
+        .styled-table td:nth-child(3) {
+            display: none;
+        }
+
+        .avatar-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 1.2rem;
+        }
+
+        .contato-cell {
+            gap: 6px;
+        }
+    }
 </style>
 
 @code {
     private List<ClienteModel> clientes = new();
     private List<ClienteModel> clientesFiltrados = new();
     private bool carregando = true;
-    private string filtroBusca = "";
+    private string _filtroBusca = "";
     private JanelaConfirmacao? janelaConfirmacao;
+
+    // Property com setter para aplicar filtro automaticamente
+    private string filtroBusca
+    {
+        get => _filtroBusca;
+        set
+        {
+            _filtroBusca = value;
+            AplicarFiltro();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await CarregarClientes();
-        AplicarFiltro();
     }
 
     private async Task CarregarClientes()
     {
         carregando = true;
-        clientes = await Db.Clientes
-                           .OrderBy(c => c.Nome)
-                           .ToListAsync();
+        StateHasChanged();
 
-        clientesFiltrados = clientes;
-        carregando = false;
+        try
+        {
+            clientes = await Db.Clientes
+                               .OrderBy(c => c.Nome)
+                               .ToListAsync();
+
+            AplicarFiltro();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao carregar clientes: {ex.Message}");
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
     }
 
     private void AplicarFiltro()
     {
         if (string.IsNullOrWhiteSpace(filtroBusca))
         {
-            clientesFiltrados = clientes;
+            clientesFiltrados = clientes.ToList();
         }
         else
         {
@@ -370,7 +542,7 @@
 
     private void Editar(int id)
     {
-        Navigation.NavigateTo($"/clientes/editar/{id}");
+        Navigation.NavigateTo($"/clientes/editarCliente/{id}");
     }
 
     private async Task Excluir(int id)
@@ -382,13 +554,20 @@
         if (!confirmado)
             return;
 
-        var cliente = await Db.Clientes.FindAsync(id);
-        if (cliente != null)
+        try
         {
-            Db.Clientes.Remove(cliente);
-            await Db.SaveChangesAsync();
-            await CarregarClientes();
-            ToastService.Success("Cliente excluído com sucesso!");
+            var cliente = await Db.Clientes.FindAsync(id);
+            if (cliente != null)
+            {
+                Db.Clientes.Remove(cliente);
+                await Db.SaveChangesAsync();
+                await CarregarClientes();
+                ToastService.Success("Cliente excluído com sucesso!");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao excluir cliente: {ex.Message}");
         }
     }
 }
