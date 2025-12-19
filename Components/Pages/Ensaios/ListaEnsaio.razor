@@ -69,7 +69,7 @@
                     <tbody>
                         @foreach (var e in ensaiosFiltrados)
                         {
-                            <tr>
+                            <tr @onclick="() => Editar(e.Id)" style="cursor: pointer;">
                                 <td>
                                     <div class="info-cell">
                                         <div class="titulo-row">
@@ -107,9 +107,6 @@
                                     </div>
                                 </td>
                                 <td class="actions-cell">
-                                    <button class="icon-btn edit" title="Editar" @onclick="() => Editar(e.Id)">
-                                        ✎
-                                    </button>
                                     <button class="icon-btn delete" title="Excluir" @onclick="() => Excluir(e.Id)">
                                         ✕
                                     </button>
