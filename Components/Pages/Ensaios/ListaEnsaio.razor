@@ -19,15 +19,39 @@
         <p class="subtitle">Gerencie seus ensaios fotográficos</p>
     </div>
 
-    <!-- Barra de Ações -->
     <div class="actions-bar">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text"
-                   class="form-control"
-                   placeholder="Buscar por título, tipo ou cliente..."
-                   value="@filtroBusca"
-                   @oninput="OnFiltroChanged" />
+        <div class="filters-group">
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text"
+                       class="form-control"
+                       placeholder="Título ou cliente..."
+                       @bind-value="filtroBusca"
+                       @bind-value:event="oninput"
+                       @onkeyup="AplicarFiltro" />
+            </div>
+
+            <div class="filter-item">
+                <input type="date"
+                       class="form-control"
+                       @bind="filtroData"
+                       @bind:after="AplicarFiltro" />
+            </div>
+
+            <div class="filter-item">
+                <select class="form-control" @bind="filtroTipo" @bind:after="AplicarFiltro">
+                    <option value="">Todos os Tipos</option>
+                    @foreach (var tipo in Enum.GetValues<TipoEnsaio>())
+                    {
+                        <option value="@tipo">@tipo</option>
+                    }
+                </select>
+            </div>
+
+            @if (TemFiltroAtivo)
+            {
+                <button class="btn-clear" @onclick="LimparFiltros" title="Limpar Filtros">🗑</button>
+            }
         </div>
 
         <button class="btn btn-primary" @onclick="IrParaCriarEnsaio">
@@ -36,7 +60,6 @@
         </button>
     </div>
 
-    <!-- Tabela -->
     <div class="table-container">
         @if (carregando)
         {
@@ -50,7 +73,7 @@
             <div class="empty-message">
                 <div class="empty-icon">📷</div>
                 <h3>Nenhum ensaio encontrado</h3>
-                <p>@(string.IsNullOrWhiteSpace(filtroBusca) ? "Comece criando seu primeiro ensaio." : "Tente ajustar os filtros de busca.")</p>
+                <p>@(TemFiltroAtivo ? "Tente ajustar os filtros de busca." : "Comece criando seu primeiro ensaio.")</p>
             </div>
         }
         else
@@ -160,11 +183,23 @@
         flex-wrap: wrap;
     }
 
+    .actions-cell {
+        text-align: center;
+        vertical-align: middle !important;
+    }
+
+    .filters-group {
+        display: flex;
+        gap: 12px;
+        flex: 1;
+        align-items: center;
+        min-width: 300px;
+    }
+
     .search-box {
         flex: 1;
-        min-width: 250px;
-        max-width: 500px;
         position: relative;
+        min-width: 200px;
     }
 
     .search-icon {
@@ -173,22 +208,43 @@
         top: 50%;
         transform: translateY(-50%);
         color: #a0aec0;
-        font-size: 1rem;
     }
 
     .form-control {
-        padding: 12px 16px 12px 44px;
+        padding: 10px 16px;
         border: 2px solid #e2e8f0;
         border-radius: 8px;
         width: 100%;
-        font-size: 1rem;
+        font-size: 0.95rem;
         transition: all 0.2s;
     }
 
-        .form-control:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    .search-box .form-control {
+        padding-left: 40px;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+    }
+
+    .btn-clear {
+        background: #edf2f7;
+        border: none;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .btn-clear:hover {
+            background: #e2e8f0;
+            color: #e53e3e;
         }
 
     .btn {
@@ -201,7 +257,6 @@
         align-items: center;
         gap: 8px;
         transition: all 0.2s;
-        white-space: nowrap;
     }
 
     .btn-primary {
@@ -211,13 +266,13 @@
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
         }
 
     .table-container {
         background: white;
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         overflow: hidden;
     }
 
@@ -230,290 +285,131 @@
         border-collapse: collapse;
     }
 
-        .styled-table th {
-            text-align: left;
-            background: #f7fafc;
-            padding: 16px 12px;
-            font-weight: 600;
-            color: #4a5568;
-            border-bottom: 2px solid #e2e8f0;
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
-
-        .styled-table td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #edf2f7;
-            color: #2d3748;
-            vertical-align: middle;
-        }
-
-        .styled-table tr:hover {
-            background: #f7faff;
-        }
-
-        .styled-table tr:last-child td {
-            border-bottom: none;
-        }
-
-    /* Célula de Informações (Título + Cliente + Tipo) */
-    .info-cell {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+    .styled-table th {
+        text-align: left;
+        background: #f7fafc;
+        padding: 16px 12px;
+        color: #4a5568;
+        border-bottom: 2px solid #e2e8f0;
     }
 
-    .titulo-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .titulo-principal {
-        font-weight: 600;
-        font-size: 1rem;
+    .styled-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #edf2f7;
         color: #2d3748;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex: 1;
-        min-width: 0;
     }
 
-    .cliente-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: #718096;
-        font-size: 0.9rem;
+    .styled-table tr:hover {
+        background: #f8fafc;
     }
 
-    .label-icon {
-        font-size: 0.85rem;
-    }
-
-    .cliente-nome {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .tipo-badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: white;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-    /* Célula de Data */
-    .data-info {
+    .info-cell {
         display: flex;
         flex-direction: column;
         gap: 4px;
     }
 
-        .data-info .data {
-            font-weight: 500;
-            color: #2d3748;
-            font-size: 0.95rem;
-        }
-
-        .data-info .hora {
-            font-size: 0.85rem;
-            color: #718096;
-        }
-
-    /* Célula de Local */
-    .local-info {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .local-icon {
-        font-size: 0.9rem;
-        flex-shrink: 0;
-    }
-
-    .local-texto {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+    .titulo-principal {
+        font-weight: 600;
         color: #2d3748;
     }
 
-    /* Célula Financeira (Valor + Status) */
-    .financeiro-cell {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        align-items: flex-start;
-    }
-
-    .valor-texto {
-        font-weight: 600;
-        color: #38a169;
-        font-size: 1rem;
+    .tipo-badge {
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        color: white;
+        font-weight: 700;
     }
 
     .situacao-badge {
-        display: inline-block;
         padding: 3px 10px;
         border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
+        font-size: 0.7rem;
         color: white;
-        white-space: nowrap;
+        font-weight: 700;
     }
 
-    /* Ações */
-    .actions-cell {
-        text-align: center;
-    }
-
-    .icon-btn {
+    .icon-btn.delete {
         border: none;
         background: none;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         cursor: pointer;
-        padding: 8px;
-        border-radius: 6px;
-        transition: all 0.2s;
+        color: #a0aec0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin: 0 4px;
+        width: 32px;
+        height: 32px;
+        padding: 0; 
+        border-radius: 50%;
+        transition: all 0.2s;
+        line-height: 1; 
+        transition: all 0.2s;
     }
 
-        .icon-btn.edit {
-            color: #4a5568;
-        }
-
-            .icon-btn.edit:hover {
-                background: #ebf8ff;
-                color: #3182ce;
-            }
-
-        .icon-btn.delete {
-            color: #4a5568;
-        }
-
-            .icon-btn.delete:hover {
-                background: #fff5f5;
-                color: #e53e3e;
-            }
-
-    .table-footer {
-        padding: 16px;
-        background: #f7fafc;
-        border-top: 1px solid #e2e8f0;
-        color: #718096;
-        font-size: 0.9rem;
-        text-align: right;
+    .icon-btn.delete:hover {
+        background: #fff5f5;
+        color: #e53e3e;
     }
 
-    /* Loading State */
-    .loading-container {
-        padding: 60px 32px;
+    .loading-container, .empty-message {
+        padding: 60px;
         text-align: center;
+        color: #718096;
     }
 
     .loading-spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid #e2e8f0;
-        border-top-color: #667eea;
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
         border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto 20px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
     }
 
     @@keyframes spin {
-        to {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
             transform: rotate(360deg);
         }
     }
 
-    .loading-container p {
+    .table-footer {
+        padding: 15px;
+        background: #f7fafc;
+        text-align: right;
         color: #718096;
-        font-size: 1.1rem;
-        margin: 0;
+        font-size: 0.9rem;
     }
 
-    /* Empty State */
-    .empty-message {
-        padding: 60px 32px;
-        text-align: center;
+    .search-box .form-control {
+        padding-left: 40px;
+        cursor: text;
     }
 
-    .empty-icon {
-        font-size: 4rem;
-        margin-bottom: 16px;
-        opacity: 0.5;
+    input[type="date"].form-control,
+    select.form-control {
+        cursor: pointer;
     }
 
-    .empty-message h3 {
-        color: #2d3748;
-        font-size: 1.5rem;
-        margin: 0 0 8px 0;
+    .btn-clear,
+    .btn,
+    .icon-btn {
+        cursor: pointer;
     }
 
-    .empty-message p {
-        color: #718096;
-        font-size: 1rem;
-        margin: 0;
-    }
-
-    /* Responsivo */
-    @@media (max-width: 1024px) {
-        .styled-table {
-            font-size: 0.9rem;
-        }
-
-        .titulo-principal {
-            font-size: 0.95rem;
-        }
-
-        .tipo-badge,
-        .situacao-badge {
-            font-size: 0.7rem;
-            padding: 3px 8px;
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .actions-bar {
-            flex-direction: column;
-        }
-
-        .search-box {
-            max-width: 100%;
-        }
-
-        .btn {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .styled-table th:nth-child(3),
-        .styled-table td:nth-child(3) {
-            display: none;
-        }
-
-        .info-cell {
-            gap: 6px;
-        }
-
-        .titulo-row {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 6px;
-        }
+    select.form-control {
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 1em;
+        padding-right: 2.5rem;
     }
 </style>
 
@@ -521,18 +417,19 @@
     private List<EnsaioModel> ensaios = new();
     private List<EnsaioModel> ensaiosFiltrados = new();
     private bool carregando = true;
+
+    // Filtros
     private string filtroBusca = "";
+    private DateTime? filtroData;
+    private TipoEnsaio? filtroTipo;
+
     private JanelaConfirmacao? janelaConfirmacao;
+
+    private bool TemFiltroAtivo => !string.IsNullOrWhiteSpace(filtroBusca) || filtroData.HasValue || filtroTipo.HasValue;
 
     protected override async Task OnInitializedAsync()
     {
         await CarregarEnsaios();
-    }
-
-    private void OnFiltroChanged(ChangeEventArgs e)
-    {
-        filtroBusca = e.Value?.ToString() ?? string.Empty;
-        AplicarFiltro();
     }
 
     private async Task CarregarEnsaios()
@@ -540,7 +437,6 @@
         carregando = true;
         try
         {
-            // Chamada ao serviço em vez do DbContext direto
             ensaios = await EnsaioService.ListarTodosAsync();
             AplicarFiltro();
         }
@@ -556,19 +452,39 @@
 
     private void AplicarFiltro()
     {
-        if (string.IsNullOrWhiteSpace(filtroBusca))
+        var query = ensaios.AsQueryable();
+
+        // 1. Filtro por texto (Título ou Nome do Cliente)
+        if (!string.IsNullOrWhiteSpace(filtroBusca))
         {
-            ensaiosFiltrados = ensaios.ToList();
-            return;
+            query = query.Where(e =>
+                (e.Titulo != null && e.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase)) ||
+                (e.Cliente != null && e.Cliente.Nome != null && e.Cliente.Nome.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase))
+            );
         }
 
-        ensaiosFiltrados = ensaios
-            .Where(e =>
-                e.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
-                e.Tipo.ToString().Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
-                (e.Cliente?.Nome?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false)
-            )
-            .ToList();
+        // 2. Filtro por Data
+        if (filtroData.HasValue)
+        {
+            query = query.Where(e => e.Data.Date == filtroData.Value.Date);
+        }
+
+        // 3. Filtro por Tipo
+        if (filtroTipo.HasValue)
+        {
+            query = query.Where(e => e.Tipo == filtroTipo.Value);
+        }
+
+        // Ordenação por data (mais recente primeiro)
+        ensaiosFiltrados = query.OrderByDescending(e => e.Data).ToList();
+    }
+
+    private void LimparFiltros()
+    {
+        filtroBusca = string.Empty;
+        filtroData = null;
+        filtroTipo = null;
+        AplicarFiltro();
     }
 
     private async Task Excluir(int id)
@@ -580,10 +496,8 @@
 
         try
         {
-            // Chamada ao serviço para deletar
             await EnsaioService.ExcluirAsync(id);
-
-            await CarregarEnsaios(); // Recarrega a lista
+            await CarregarEnsaios();
             ToastService.Success("Ensaio excluído com sucesso!");
         }
         catch (Exception ex)
