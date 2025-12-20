@@ -2,48 +2,49 @@ using Microsoft.EntityFrameworkCore;
 using PhotoStudio.app.Components;
 using PhotoStudio.app.Data;
 using PhotoStudio.app.Services;
+using PhotoStudio.app.Services.Clientes;
+using PhotoStudio.app.Services.Ensaios;
 
-namespace PhotoStudio.app
+public class Program
 {
-    public class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
+        var builder = WebApplication.CreateBuilder(args);
+
+        // 1. Serviços básicos do Blazor
+        builder.Services.AddRazorComponents()
+            .AddInteractiveServerComponents();
+
+        builder.Services.AddHttpClient();
+
+        // 2. Serviços da sua aplicação
+        builder.Services.AddScoped<ClienteService>();
+        builder.Services.AddScoped<EnsaioService>();
+        builder.Services.AddScoped<ToastService>();
+
+        // 3. Registro do Banco de Dados (APENAS ESTE É NECESSÁRIO)
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+        // O AddDbContextFactory já resolve tanto o IDbContextFactory quanto o AppDbContext
+        builder.Services.AddDbContextFactory<AppDbContext>(options =>
+            options.UseSqlServer(connectionString));
+
+        var app = builder.Build();
+
+        // ... resto do código (Middleware, MapRazorComponents, etc)
+        if (!app.Environment.IsDevelopment())
         {
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
-            builder.Services.AddRazorComponents()
-                .AddInteractiveServerComponents();
-
-            builder.Services.AddScoped<ToastService>();
-
-            builder.Services.AddScoped<AppDbContext>();
-
-            builder.Services.AddHttpClient();
-
-            // Configurar SQL Server
-            builder.Services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-            var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
-            {
-                app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
-
-            app.UseHttpsRedirection();
-
-            app.UseStaticFiles();
-            app.UseAntiforgery();
-
-            app.MapRazorComponents<App>()
-                .AddInteractiveServerRenderMode();
-
-            app.Run();
+            app.UseExceptionHandler("/Error");
+            app.UseHsts();
         }
+
+        app.UseHttpsRedirection();
+        app.UseStaticFiles();
+        app.UseAntiforgery();
+
+        app.MapRazorComponents<App>()
+            .AddInteractiveServerRenderMode();
+
+        app.Run();
     }
 }

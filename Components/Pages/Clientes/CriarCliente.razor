@@ -3,10 +3,10 @@
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Services
-@using Microsoft.EntityFrameworkCore
-@inject AppDbContext DbContext
+@using PhotoStudio.app.Services.Clientes
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject ClienteService ClienteService
 
 <PageTitle>Criar Cliente - Estúdio de Fotografia</PageTitle>
 
@@ -39,8 +39,12 @@
                 <!-- Telefone -->
                 <div class="form-group">
                     <label for="telefone">Telefone *</label>
-                    <InputText id="telefone" class="form-control" @bind-Value="novoCliente.Telefone"
-                               placeholder="(00) 00000-0000" />
+                    <InputText id="telefone"
+                               class="form-control"
+                               @bind-Value="novoCliente.Telefone"
+                               @oninput="AplicarMascaraTelefone"
+                               maxlength="15"
+                               placeholder="(00) 000000000" />
                     <ValidationMessage For="@(() => novoCliente.Telefone)" />
                 </div>
 
@@ -303,20 +307,13 @@
     private async Task SalvarCliente()
     {
         salvando = true;
-        StateHasChanged();
 
         try
         {
-            DbContext.Clientes.Add(novoCliente);
-            await DbContext.SaveChangesAsync();
+            await ClienteService.CriarAsync(novoCliente);
 
             ToastService.Success("Cliente criado com sucesso!");
-            await Task.Delay(500); // Feedback visual
             Navigation.NavigateTo("/clientes");
-        }
-        catch (DbUpdateException ex)
-        {
-            ToastService.Error($"Erro ao salvar no banco: {ex.InnerException?.Message ?? ex.Message}");
         }
         catch (Exception ex)
         {
@@ -325,12 +322,27 @@
         finally
         {
             salvando = false;
-            StateHasChanged();
         }
     }
 
     private void Voltar()
     {
         Navigation.NavigateTo("/clientes");
+    }
+
+    private void AplicarMascaraTelefone(ChangeEventArgs e)
+    {
+        if (novoCliente == null) return;
+
+        var numeros = new string(e.Value?.ToString()?.Where(char.IsDigit).ToArray() ?? Array.Empty<char>());
+
+        if (numeros.Length > 11) numeros = numeros.Substring(0, 11);
+
+        if (numeros.Length <= 2)
+            novoCliente.Telefone = $"({numeros}";
+        else if (numeros.Length <= 7)
+            novoCliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2)}";
+        else
+            novoCliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2, 5)}-{numeros.Substring(7)}";
     }
 }

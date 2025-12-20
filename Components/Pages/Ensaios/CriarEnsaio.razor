@@ -1,12 +1,14 @@
 ﻿@page "/ensaios/criarEnsaio"
 @rendermode InteractiveServer
-@using Microsoft.EntityFrameworkCore
 @using Microsoft.JSInterop
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Services
+@using PhotoStudio.app.Services.Clientes
+@using PhotoStudio.app.Services.Ensaios
 @inject NavigationManager Navigation
-@inject AppDbContext DbContext
+@inject EnsaioService EnsaioService
+@inject ClienteService ClienteService
 @inject ToastService ToastService
 
 <PageTitle>Criar Ensaio</PageTitle>
@@ -374,6 +376,9 @@
 </style>
 
 @code {
+
+    private bool mostrarSucesso = false;
+
     private EnsaioModel novoEnsaio = new()
     {
         Titulo = "",
@@ -388,20 +393,18 @@
     private string horaEnsaio = "10:00";
     private List<ClienteModel> clientes = new();
     private bool salvando = false;
-    private bool mostrarSucesso = false;
     private string mensagemErro = "";
 
     protected async override Task OnInitializedAsync()
     {
-        await CarregarClientes();
-    }
-
-    private async Task CarregarClientes()
-    {
-        clientes = await DbContext.Clientes
-        .AsNoTracking()
-        .OrderBy(c => c.Nome)
-        .ToListAsync();
+        try
+        {
+            clientes = await ClienteService.ListarTodosAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Erro ao carregar lista de clientes.");
+        }
     }
 
     private async Task SalvarEnsaio()
@@ -416,20 +419,21 @@
 
         try
         {
-            // Combina data e hora
-            var hora = TimeSpan.Parse(horaEnsaio);
-            novoEnsaio.Data = dataEnsaio.Date.Add(hora);
+            if (TimeSpan.TryParse(horaEnsaio, out var hora))
+            {
+                novoEnsaio.Data = dataEnsaio.Date.Add(hora);
+            }
 
-            DbContext.Ensaios.Add(novoEnsaio);
-            await DbContext.SaveChangesAsync();
+            await EnsaioService.CriarAsync(novoEnsaio);
 
             ToastService.Success("Ensaio criado com sucesso!");
-            await Task.Delay(300);
+
+            await Task.Delay(500);
             Navigation.NavigateTo("/ensaios");
         }
-        catch (DbUpdateException ex)
+        catch (Exception ex)
         {
-            ToastService.Error(ex.InnerException?.Message ?? ex.Message);
+            ToastService.Error($"Erro ao salvar: {ex.Message}");
         }
         finally
         {
@@ -437,25 +441,8 @@
         }
     }
 
-
-    private void LimparFormulario()
-    {
-        novoEnsaio = new()
-        {
-            Titulo = "",
-            Tipo = TipoEnsaio.Retrato,
-            Local = "",
-            Data = DateTime.Now,
-            ClienteId = 0,
-            Situacao = Situacao.Agendado
-        };
-        dataEnsaio = DateTime.Today;
-        horaEnsaio = "10:00";
-    }
-
     private void Cancelar()
     {
-        LimparFormulario();
         Navigation.NavigateTo("/ensaios");
     }
 }

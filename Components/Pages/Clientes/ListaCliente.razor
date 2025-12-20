@@ -1,11 +1,10 @@
 ﻿@page "/clientes"
 @rendermode InteractiveServer
-@using Microsoft.EntityFrameworkCore
 @using PhotoStudio.app.Components.Shared
 @using PhotoStudio.app.Models
-@using PhotoStudio.app.Data
 @using PhotoStudio.app.Services
-@inject AppDbContext Db
+@using PhotoStudio.app.Services.Clientes
+@inject ClienteService ClienteService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 
@@ -483,33 +482,21 @@
     private string _filtroBusca = "";
     private JanelaConfirmacao? janelaConfirmacao;
 
-    // Property com setter para aplicar filtro automaticamente
     private string filtroBusca
     {
         get => _filtroBusca;
-        set
-        {
-            _filtroBusca = value;
-            AplicarFiltro();
-        }
+        set { _filtroBusca = value; AplicarFiltro(); }
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CarregarClientes();
-    }
+    protected override async Task OnInitializedAsync() => await CarregarClientes();
 
     private async Task CarregarClientes()
     {
         carregando = true;
-        StateHasChanged();
-
         try
         {
-            clientes = await Db.Clientes
-                               .OrderBy(c => c.Nome)
-                               .ToListAsync();
-
+            // A página apenas solicita os dados
+            clientes = await ClienteService.ObterTodosAsync();
             AplicarFiltro();
         }
         catch (Exception ex)
@@ -519,7 +506,25 @@
         finally
         {
             carregando = false;
-            StateHasChanged();
+        }
+    }
+
+    private async Task Excluir(int id)
+    {
+        if (janelaConfirmacao == null) return;
+
+        bool confirmado = await janelaConfirmacao.Show();
+        if (!confirmado) return;
+
+        try
+        {
+            await ClienteService.ExcluirAsync(id);
+            await CarregarClientes();
+            ToastService.Success("Cliente excluído com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao excluir: {ex.Message}");
         }
     }
 
@@ -547,31 +552,5 @@
     private void Editar(int id)
     {
         Navigation.NavigateTo($"/clientes/editarCliente/{id}");
-    }
-
-    private async Task Excluir(int id)
-    {
-        if (janelaConfirmacao == null)
-            return;
-
-        bool confirmado = await janelaConfirmacao.Show();
-        if (!confirmado)
-            return;
-
-        try
-        {
-            var cliente = await Db.Clientes.FindAsync(id);
-            if (cliente != null)
-            {
-                Db.Clientes.Remove(cliente);
-                await Db.SaveChangesAsync();
-                await CarregarClientes();
-                ToastService.Success("Cliente excluído com sucesso!");
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Erro ao excluir cliente: {ex.Message}");
-        }
     }
 }

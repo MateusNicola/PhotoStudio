@@ -1,12 +1,12 @@
 ﻿@page "/ensaios"
-@using Microsoft.EntityFrameworkCore
 @using PhotoStudio.app.Components.Shared
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Services
+@using PhotoStudio.app.Services.Ensaios
 @rendermode InteractiveServer
+@inject EnsaioService EnsaioService
 @inject NavigationManager Navigation
-@inject AppDbContext Db
 @inject ToastService ToastService
 
 <PageTitle>Ensaios - Estúdio de Fotografia</PageTitle>
@@ -107,7 +107,10 @@
                                     </div>
                                 </td>
                                 <td class="actions-cell">
-                                    <button class="icon-btn delete" title="Excluir" @onclick="() => Excluir(e.Id)">
+                                    <button class="icon-btn delete"
+                                            title="Excluir"
+                                            @onclick="() => Excluir(e.Id)"
+                                            @onclick:stopPropagation="true">
                                         ✕
                                     </button>
                                 </td>
@@ -524,7 +527,6 @@
     protected override async Task OnInitializedAsync()
     {
         await CarregarEnsaios();
-        AplicarFiltro();
     }
 
     private void OnFiltroChanged(ChangeEventArgs e)
@@ -536,16 +538,11 @@
     private async Task CarregarEnsaios()
     {
         carregando = true;
-        StateHasChanged();
-
         try
         {
-            ensaios = await Db.Ensaios
-                .Include(e => e.Cliente)
-                .OrderByDescending(e => e.Data)
-                .ToListAsync();
-
-            ensaiosFiltrados = ensaios.ToList();
+            // Chamada ao serviço em vez do DbContext direto
+            ensaios = await EnsaioService.ListarTodosAsync();
+            AplicarFiltro();
         }
         catch (Exception ex)
         {
@@ -554,7 +551,6 @@
         finally
         {
             carregando = false;
-            StateHasChanged();
         }
     }
 
@@ -575,31 +571,20 @@
             .ToList();
     }
 
-    private void Editar(int id)
-    {
-        Navigation.NavigateTo($"/ensaios/editarEnsaio/{id}");
-    }
-
     private async Task Excluir(int id)
     {
-        if (janelaConfirmacao == null)
-            return;
+        if (janelaConfirmacao == null) return;
 
         bool confirmado = await janelaConfirmacao.Show();
-        if (!confirmado)
-            return;
+        if (!confirmado) return;
 
         try
         {
-            var ensaio = await Db.Ensaios.FindAsync(id);
-            if (ensaio != null)
-            {
-                Db.Ensaios.Remove(ensaio);
-                await Db.SaveChangesAsync();
-                await CarregarEnsaios();
-                AplicarFiltro();
-                ToastService.Success("Ensaio excluído com sucesso!");
-            }
+            // Chamada ao serviço para deletar
+            await EnsaioService.ExcluirAsync(id);
+
+            await CarregarEnsaios(); // Recarrega a lista
+            ToastService.Success("Ensaio excluído com sucesso!");
         }
         catch (Exception ex)
         {
@@ -607,33 +592,25 @@
         }
     }
 
-    private void IrParaCriarEnsaio()
-    {
-        Navigation.NavigateTo("/ensaios/criarEnsaio");
-    }
+    private void Editar(int id) => Navigation.NavigateTo($"/ensaios/editarEnsaio/{id}");
+    private void IrParaCriarEnsaio() => Navigation.NavigateTo("/ensaios/criarEnsaio");
 
-    private string ObterCorTipo(TipoEnsaio tipo)
+    private string ObterCorTipo(TipoEnsaio tipo) => tipo switch
     {
-        return tipo switch
-        {
-            TipoEnsaio.Casamento => "#f093fb",
-            TipoEnsaio.Gestante => "#fa709a",
-            TipoEnsaio.Infantil => "#4facfe",
-            TipoEnsaio.Evento => "#43e97b",
-            TipoEnsaio.Retrato => "#667eea",
-            _ => "#a0aec0"
-        };
-    }
+        TipoEnsaio.Casamento => "#f093fb",
+        TipoEnsaio.Gestante => "#fa709a",
+        TipoEnsaio.Infantil => "#4facfe",
+        TipoEnsaio.Evento => "#43e97b",
+        TipoEnsaio.Retrato => "#667eea",
+        _ => "#a0aec0"
+    };
 
-    private string ObterCorSituacao(Situacao situacao)
+    private string ObterCorSituacao(Situacao situacao) => situacao switch
     {
-        return situacao switch
-        {
-            Situacao.Cancelado => "#e53e3e",
-            Situacao.Concluido => "#38a169",
-            Situacao.Agendado => "#3182ce",
-            Situacao.Confirmado => "#d69e2e",
-            _ => "#a0aec0"
-        };
-    }
+        Situacao.Cancelado => "#e53e3e",
+        Situacao.Concluido => "#38a169",
+        Situacao.Agendado => "#3182ce",
+        Situacao.Confirmado => "#d69e2e",
+        _ => "#a0aec0"
+    };
 }

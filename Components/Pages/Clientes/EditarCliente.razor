@@ -3,10 +3,10 @@
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Services
-@using Microsoft.EntityFrameworkCore
-@inject AppDbContext DbContext
+@using PhotoStudio.app.Services.Clientes
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject ClienteService ClienteService
 
 <PageTitle>Editar Cliente - Estúdio de Fotografia</PageTitle>
 
@@ -63,7 +63,7 @@
                                    class="form-control"
                                    @bind-Value="cliente.Telefone"
                                    @oninput="AplicarMascaraTelefone"
-                                   maxlength="14"
+                                   maxlength="15"
                                    placeholder="(00) 000000000" />
                         <ValidationMessage For="@(() => cliente.Telefone)" />
                     </div>
@@ -380,12 +380,10 @@
     private async Task CarregarCliente()
     {
         carregando = true;
-        StateHasChanged();
-
         try
         {
-            cliente = await DbContext.Clientes
-                .FirstOrDefaultAsync(c => c.Id == Id);
+            // Busca o cliente através do serviço
+            cliente = await ClienteService.ObterPorIdAsync(Id);
 
             if (cliente == null)
             {
@@ -395,34 +393,10 @@
         catch (Exception ex)
         {
             ToastService.Error($"Erro ao carregar cliente: {ex.Message}");
-            cliente = null;
         }
         finally
         {
             carregando = false;
-            StateHasChanged();
-        }
-    }
-
-    private void AplicarMascaraTelefone(ChangeEventArgs e)
-    {
-        if (cliente == null)
-            return;
-
-        var numeros = new string(e.Value?.ToString()
-            .Where(char.IsDigit)
-            .ToArray());
-
-        if (numeros.Length > 11)
-            numeros = numeros.Substring(0, 11);
-
-        if (numeros.Length <= 2)
-        {
-            cliente.Telefone = $"({numeros}";
-        }
-        else
-        {
-            cliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2)}";
         }
     }
 
@@ -431,19 +405,14 @@
         if (cliente == null) return;
 
         salvando = true;
-        StateHasChanged();
-
         try
         {
-            await DbContext.SaveChangesAsync();
+            // Salva as alterações através do serviço
+            await ClienteService.AtualizarAsync(cliente);
 
             ToastService.Success("Cliente atualizado com sucesso!");
-            await Task.Delay(500); // Pequeno delay para feedback visual
+            await Task.Delay(500);
             Navigation.NavigateTo("/clientes");
-        }
-        catch (DbUpdateException ex)
-        {
-            ToastService.Error($"Erro ao salvar no banco de dados: {ex.InnerException?.Message ?? ex.Message}");
         }
         catch (Exception ex)
         {
@@ -452,12 +421,24 @@
         finally
         {
             salvando = false;
-            StateHasChanged();
         }
     }
 
-    private void Voltar()
+    private void AplicarMascaraTelefone(ChangeEventArgs e)
     {
-        Navigation.NavigateTo("/clientes");
+        if (cliente == null) return;
+
+        var numeros = new string(e.Value?.ToString()?.Where(char.IsDigit).ToArray() ?? Array.Empty<char>());
+
+        if (numeros.Length > 11) numeros = numeros.Substring(0, 11);
+
+        if (numeros.Length <= 2)
+            cliente.Telefone = $"({numeros}";
+        else if (numeros.Length <= 7)
+            cliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2)}";
+        else
+            cliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2, 5)}-{numeros.Substring(7)}";
     }
+
+    private void Voltar() => Navigation.NavigateTo("/clientes");
 }

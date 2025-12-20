@@ -1,10 +1,12 @@
 ﻿@page "/ensaios/editarEnsaio/{EnsaioId:int}"
 @rendermode InteractiveServer
-@using Microsoft.EntityFrameworkCore
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Services
-@inject AppDbContext DbContext
+@using PhotoStudio.app.Services.Clientes
+@using PhotoStudio.app.Services.Ensaios
+@inject EnsaioService EnsaioService
+@inject ClienteService ClienteService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 
@@ -441,8 +443,7 @@
 </style>
 
 @code {
-    [Parameter]
-    public int EnsaioId { get; set; }
+    [Parameter] public int EnsaioId { get; set; }
 
     private EnsaioModel? ensaio;
     private List<ClienteModel> clientes = new();
@@ -453,122 +454,65 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await CarregarClientes();
-        await CarregarEnsaio();
-    }
-
-    private async Task CarregarClientes()
-    {
-        clientes = await DbContext.Clientes
-            .AsNoTracking()
-            .OrderBy(c => c.Nome)
-            .ToListAsync();
-    }
-
-    private async Task CarregarEnsaio()
-    {
-        carregando = true;
-        StateHasChanged();
-
         try
         {
-            // Carregar COM tracking para permitir atualização
-            ensaio = await DbContext.Ensaios
-                .FirstOrDefaultAsync(e => e.Id == EnsaioId);
-
-            if (ensaio != null)
-            {
-                dataEnsaio = ensaio.Data.Date;
-                horaEnsaio = ensaio.Data.ToString("HH:mm");
-            }
-            else
-            {
-                ToastService.Error("Ensaio não encontrado.");
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Erro ao carregar ensaio: {ex.Message}");
-            ensaio = null;
+            // Carrega dados em paralelo para maior rapidez
+            var tarefas = new Task[] {
+                CarregarClientes(),
+                CarregarEnsaio()
+            };
+            await Task.WhenAll(tarefas);
         }
         finally
         {
             carregando = false;
-            StateHasChanged();
+        }
+    }
+
+    private async Task CarregarClientes()
+    {
+        clientes = await ClienteService.ListarTodosAsync();
+    }
+
+    private async Task CarregarEnsaio()
+    {
+        ensaio = await EnsaioService.ObterPorIdAsync(EnsaioId);
+
+        if (ensaio != null)
+        {
+            dataEnsaio = ensaio.Data.Date;
+            horaEnsaio = ensaio.Data.ToString("HH:mm");
         }
     }
 
     private async Task SalvarEnsaio()
     {
-        if (ensaio == null) return;
-
-        // Validações customizadas
-        if (string.IsNullOrWhiteSpace(ensaio.Titulo))
-        {
-            ToastService.Error("O título é obrigatório.");
-            return;
-        }
-
-        if (ensaio.ClienteId == 0)
-        {
-            ToastService.Error("Selecione um cliente.");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(ensaio.Local))
-        {
-            ToastService.Error("O local é obrigatório.");
-            return;
-        }
-
-        if (string.IsNullOrEmpty(horaEnsaio))
-        {
-            ToastService.Error("O horário é obrigatório.");
-            return;
-        }
+        if (ensaio == null || ensaio.ClienteId == 0) return;
 
         salvando = true;
-        StateHasChanged();
-
         try
         {
-            // Atualiza a data combinando data e hora
-            var hora = TimeSpan.Parse(horaEnsaio);
-            ensaio.Data = dataEnsaio.Date.Add(hora);
+            // Sincroniza Data e Hora
+            if (TimeSpan.TryParse(horaEnsaio, out var hora))
+            {
+                ensaio.Data = dataEnsaio.Date.Add(hora);
+            }
 
-            // Como a entidade já está sendo rastreada, só precisamos salvar
-            await DbContext.SaveChangesAsync();
-
+            await EnsaioService.AtualizarAsync(ensaio);
             ToastService.Success("Ensaio atualizado com sucesso!");
 
-            // Aguarda antes de navegar
             await Task.Delay(500);
-
-            // Usa NavigateTo sem forceLoad para evitar NavigationException
-            Navigation.NavigateTo("/ensaios", false);
-        }
-        catch (DbUpdateException ex)
-        {
-            ToastService.Error($"Erro ao salvar no banco de dados: {ex.InnerException?.Message ?? ex.Message}");
+            Navigation.NavigateTo("/ensaios");
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Erro ao salvar alterações: {ex.Message}");
+            ToastService.Error($"Erro ao atualizar: {ex.Message}");
         }
         finally
         {
             salvando = false;
-            StateHasChanged();
         }
     }
 
-    private void Voltar()
-    {
-        Navigation.NavigateTo("/ensaios");
-    }
-
-    private void IrParaCriarCliente()
-    {
-        Navigation.NavigateTo("/clientes/criarCliente");
-    }
+    private void Voltar() => Navigation.NavigateTo("/ensaios");
 }
