@@ -20,7 +20,7 @@ namespace PhotoStudio.app.Models
         [Required(ErrorMessage = "Endereço é obrigatório")]
         public string Endereco { get; set; } = string.Empty;
 
-        [Column("created_at")]
+        [Column("criado_em")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }
