@@ -46,9 +46,6 @@ Exemplo de string de conexão (`appsettings.json`):
   "DefaultConnection": "Server=localhost;Database=PhotoStudioDb;User Id=sa;Password=SUASENHA;TrustServerCertificate=True;"
 }
 ```
-
-> Recomenda-se não versionar credenciais reais. Utilize variáveis de ambiente ou User Secrets.
-
 ---
 
 ## Como Executar o Projeto
