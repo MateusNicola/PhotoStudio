@@ -8,106 +8,102 @@
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 
-    <PageTitle>Clientes</PageTitle>
+<PageTitle>Clientes</PageTitle>
 
-    <div class="page-container">
-        <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Cliente" Message="Tem certeza que deseja excluir este cliente?" />
+<div class="page-container">
+    <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Cliente" Message="Tem certeza que deseja excluir este cliente?" />
 
-        <div class="page-header">
-            <h1>Clientes</h1>
-            <p class="subtitle">Gerencie seus clientes cadastrados</p>
+    <div class="page-header">
+        <h1>Clientes</h1>
+        <p class="subtitle">Gerencie seus clientes cadastrados</p>
+    </div>
+
+    <!-- Barra de Ações -->
+    <div class="actions-bar">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text"
+                   class="form-control"
+                   placeholder="Buscar por nome ou email..."
+                   @bind="filtroBusca"
+                   @bind:event="oninput" />
         </div>
 
-        <!-- Barra de Ações -->
-        <div class="actions-bar">
-            <div class="search-box">
-                <span class="search-icon">🔍</span>
-                <input type="text"
-                       class="form-control"
-                       placeholder="Buscar por nome ou email..."
-                       @bind="filtroBusca"
-                       @bind:event="oninput" />
+        <button class="btn btn-primary" @onclick="CriarCliente">
+            ✚ Novo Cliente
+        </button>
+    </div>
+
+    <!-- Tabela -->
+    <div class="table-container">
+        @if (carregando)
+        {
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Carregando clientes...</p>
+            </div>
+        }
+        else if (clientesFiltrados.Count == 0)
+        {
+            <div class="empty-message">
+                <div class="empty-icon">👤</div>
+                <h3>Nenhum cliente encontrado</h3>
+                <p>@(string.IsNullOrWhiteSpace(filtroBusca) ? "Comece criando seu primeiro cliente." : "Tente ajustar os filtros de busca.")</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">Informações Pessoais</th>
+                            <th style="width: 25%;">Contato</th>
+                            <th style="width: 35%;">Endereço</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in clientesFiltrados)
+                        {
+                            <tr @onclick="() => Editar(c.Id)" style="cursor: pointer;">
+                                <td>
+                                    <div class="info-pessoal">
+                                        <div class="nome-row">
+                                            <span class="avatar-icon">👤</span>
+                                            <span class="nome-principal" title="@c.Nome">@c.Nome</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="contato-cell">
+                                        <div class="contato-item">
+                                            <span class="contato-icon">📞</span>
+                                            <span class="contato-texto">@c.Telefone</span>
+                                        </div>
+                                        <div class="contato-item">
+                                            <span class="contato-icon">✉️</span>
+                                            <span class="contato-texto email-texto" title="@c.Email">@c.Email</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="endereco-info">
+                                        <span class="endereco-icon">📍</span>
+                                        <span class="endereco-texto" title="@c.Endereco">@c.Endereco</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             </div>
 
-            <button class="btn btn-primary" @onclick="CriarCliente">
-                + Novo Cliente
-            </button>
-        </div>
-
-        <!-- Tabela -->
-        <div class="table-container">
-            @if (carregando)
-            {
-                <div class="loading-container">
-                    <div class="loading-spinner"></div>
-                    <p>Carregando clientes...</p>
-                </div>
-            }
-            else if (clientesFiltrados.Count == 0)
-            {
-                <div class="empty-message">
-                    <div class="empty-icon">👤</div>
-                    <h3>Nenhum cliente encontrado</h3>
-                    <p>@(string.IsNullOrWhiteSpace(filtroBusca) ? "Comece criando seu primeiro cliente." : "Tente ajustar os filtros de busca.")</p>
-                </div>
-            }
-            else
-            {
-                <div class="table-scroll">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 30%;">Informações Pessoais</th>
-                                <th style="width: 25%;">Contato</th>
-                                <th style="width: 35%;">Endereço</th>
-                                <th style="width: 10%; text-align: center;">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var c in clientesFiltrados)
-                            {
-                                <tr @onclick="() => Editar(c.Id)" style="cursor: pointer;">
-                                    <td>
-                                        <div class="info-pessoal">
-                                            <div class="nome-row">
-                                                <span class="avatar-icon">👤</span>
-                                                <span class="nome-principal" title="@c.Nome">@c.Nome</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="contato-cell">
-                                            <div class="contato-item">
-                                                <span class="contato-icon">📞</span>
-                                                <span class="contato-texto">@c.Telefone</span>
-                                            </div>
-                                            <div class="contato-item">
-                                                <span class="contato-icon">✉️</span>
-                                                <span class="contato-texto email-texto" title="@c.Email">@c.Email</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="endereco-info">
-                                            <span class="endereco-icon">📍</span>
-                                            <span class="endereco-texto" title="@c.Endereco">@c.Endereco</span>
-                                        </div>
-                                    </td>
-                                    <td class="actions-cell" @onclick:stopPropagation="true">
-                                        <button class="icon-btn delete" title="Excluir" @onclick="() => Excluir(c.Id)">✕</button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-footer">
-                    <span>Total: @clientesFiltrados.Count cliente(s)</span>
-                </div>
-            }
-        </div>
+            <div class="table-footer">
+                <span>Total: @clientesFiltrados.Count cliente(s)</span>
+            </div>
+        }
     </div>
+</div>
 
 <style>
     .page-container {

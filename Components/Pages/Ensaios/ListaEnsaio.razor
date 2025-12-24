@@ -86,7 +86,6 @@
                             <th style="width: 20%;">Data e Hora</th>
                             <th style="width: 20%;">Local</th>
                             <th style="width: 12%;">Financeiro</th>
-                            <th style="width: 13%; text-align: center;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -128,14 +127,6 @@
                                             @e.Situacao.ToString()
                                         </span>
                                     </div>
-                                </td>
-                                <td class="actions-cell">
-                                    <button class="icon-btn delete"
-                                            title="Excluir"
-                                            @onclick="() => Excluir(e.Id)"
-                                            @onclick:stopPropagation="true">
-                                        ✕
-                                    </button>
                                 </td>
                             </tr>
                         }

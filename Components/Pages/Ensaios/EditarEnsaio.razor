@@ -1,5 +1,6 @@
 ﻿@page "/ensaios/editarEnsaio/{EnsaioId:int}"
 @rendermode InteractiveServer
+@using PhotoStudio.app.Components.Shared
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Services
@@ -10,7 +11,8 @@
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 
-<PageTitle>Editar Ensaio - Estúdio de Fotografia</PageTitle>
+<PageTitle>Ensaio - Estúdio de Fotografia</PageTitle>
+<JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Ensaio" Message="Tem certeza que deseja excluir este ensaio? Esta ação não pode ser desfeita." />
 
 <div class="page-container">
     <div class="page-header">
@@ -18,10 +20,29 @@
             <button class="btn-back" @onclick="Voltar" title="Voltar">
                 <span>←</span>
             </button>
-            <div>
-                <h1>Editar Ensaio</h1>
-                <p class="subtitle">Atualize os dados do ensaio fotográfico</p>
+            <div class="header-text">
+                <h1>Ensaio</h1>
             </div>
+            @if (!carregando && ensaio != null)
+            {
+                <div class="actions-right">                    
+                    <button type="submit" class="btn btn-primary" @onclick="() => SalvarEnsaio()" disabled="@(salvando || excluindo)">
+                        @if (salvando)
+                        {
+                            <span class="spinner"></span>
+                            <span>Salvando...</span>
+                        }
+                        else
+                        {
+                            <span>💾 Salvar</span>
+                        }
+                    </button>
+                    <button class="btn-delete-header" @onclick="() => ExcluirEnsaio()" title="Excluir ensaio">
+                        <span>🗑️</span>
+                        <span>Excluir</span>
+                    </button>
+                </div>
+            }
         </div>
     </div>
 
@@ -133,24 +154,6 @@
                         <ValidationMessage For="@(() => ensaio.Situacao)" />
                     </div>
                 </div>
-
-                <!-- Botões de Ação -->
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" @onclick="Voltar" disabled="@salvando">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary" disabled="@salvando">
-                        @if (salvando)
-                        {
-                            <span class="spinner"></span>
-                            <span>Salvando...</span>
-                        }
-                        else
-                        {
-                            <span>💾 Salvar Alterações</span>
-                        }
-                    </button>
-                </div>
             </EditForm>
         </div>
     }
@@ -174,6 +177,10 @@
         gap: 16px;
     }
 
+    .header-text {
+        flex: 1;
+    }
+
     .btn-back {
         background: #f7fafc;
         border: 2px solid #e2e8f0;
@@ -194,6 +201,28 @@
             background: #edf2f7;
             border-color: #cbd5e0;
             transform: translateX(-4px);
+        }
+
+    .btn-delete-header {
+        background: #fff5f5;
+        border: 2px solid #feb2b2;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #c53030;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+        .btn-delete-header:hover {
+            background: #fed7d7;
+            border-color: #fc8181;
+            transform: translateY(-2px);
         }
 
     .page-header h1 {
@@ -241,32 +270,15 @@
     label {
         font-weight: 600;
         color: #2d3748;
-        margin: 0;
-        font-size: 0.95rem;
+        margin: 0 0 6px 0;
+        font-size: 0.9rem;
     }
-
-    .btn-link {
-        background: none;
-        border: none;
-        color: #667eea;
-        font-size: 0.85rem;
-        font-weight: 600;
-        cursor: pointer;
-        padding: 4px 8px;
-        border-radius: 4px;
-        transition: all 0.2s;
-    }
-
-        .btn-link:hover {
-            background: #eef2ff;
-            color: #5a67d8;
-        }
 
     .form-control {
-        padding: 12px 16px;
+        padding: 10px 14px;
         border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 1rem;
+        border-radius: 6px;
+        font-size: 0.95rem;
         transition: all 0.2s;
         background: white;
         color: #2d3748;
@@ -288,27 +300,34 @@
 
     .validation-message {
         color: #e53e3e;
-        font-size: 0.85rem;
-        margin-top: 6px;
+        font-size: 0.8rem;
+        margin-top: 4px;
     }
 
     .form-actions {
         display: flex;
-        gap: 12px;
-        justify-content: flex-end;
+        gap: 10px;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .actions-right {
+        display: flex;
+        gap: 10px;
     }
 
     .btn {
-        padding: 12px 32px;
+        padding: 10px 24px;
         border: none;
-        border-radius: 8px;
-        font-size: 1rem;
+        border-radius: 6px;
+        font-size: 0.95rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.2s;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 6px;
+        white-space: nowrap;
     }
 
     .btn-primary {
@@ -342,6 +361,23 @@
             cursor: not-allowed;
         }
 
+    .btn-danger {
+        background: #fff5f5;
+        color: #c53030;
+        border: 2px solid #feb2b2;
+    }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #fed7d7;
+            border-color: #fc8181;
+            transform: translateY(-2px);
+        }
+
+        .btn-danger:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
     .spinner {
         width: 16px;
         height: 16px;
@@ -349,6 +385,11 @@
         border-top-color: white;
         border-radius: 50%;
         animation: spin 0.6s linear infinite;
+    }
+
+    .btn-danger .spinner {
+        border: 2px solid rgba(197, 48, 48, 0.3);
+        border-top-color: #c53030;
     }
 
     @@keyframes spin {
@@ -419,6 +460,11 @@
         }
 
         .form-actions {
+            flex-direction: column;
+        }
+
+        .actions-right {
+            width: 100%;
             flex-direction: column-reverse;
         }
 
@@ -428,16 +474,17 @@
         }
 
         .header-content {
-            flex-direction: column;
-            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        .btn-back {
-            align-self: flex-start;
+        .btn-delete-header {
+            order: 3;
+            width: 100%;
+            justify-content: center;
         }
 
         .page-header h1 {
-            font-size: 2rem;
+            font-size: 1.5rem;
         }
     }
 </style>
@@ -449,8 +496,10 @@
     private List<ClienteModel> clientes = new();
     private bool carregando = true;
     private bool salvando = false;
+    private bool excluindo = false;
     private DateTime dataEnsaio = DateTime.Today;
     private string horaEnsaio = "10:00";
+    private JanelaConfirmacao? janelaConfirmacao;
 
     protected override async Task OnInitializedAsync()
     {
@@ -511,6 +560,32 @@
         finally
         {
             salvando = false;
+        }
+    }
+
+    private async Task ExcluirEnsaio()
+    {
+        if (janelaConfirmacao == null || ensaio == null) return;
+
+        bool confirmado = await janelaConfirmacao.Show();
+        if (!confirmado) return;
+
+        excluindo = true;
+        try
+        {
+            await EnsaioService.ExcluirAsync(ensaio.Id);
+            ToastService.Success("Ensaio excluído com sucesso!");
+
+            await Task.Delay(500);
+            Navigation.NavigateTo("/ensaios");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao excluir ensaio: {ex.Message}");
+        }
+        finally
+        {
+            excluindo = false;
         }
     }
 

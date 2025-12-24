@@ -4,11 +4,15 @@
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Services
 @using PhotoStudio.app.Services.Clientes
+@using PhotoStudio.app.Components.Shared
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 @inject ClienteService ClienteService
 
-<PageTitle>Criar Cliente - Estúdio de Fotografia</PageTitle>
+<PageTitle>Cliente - Estúdio de Fotografia</PageTitle>
+
+@* Componente de confirmação (necessário referenciar o seu componente JanelaConfirmacao) *@
+<JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Cliente" Message="Tem certeza que deseja excluir este cliente?" />
 
 <div class="page-container">
     <div class="page-header">
@@ -16,9 +20,30 @@
             <button class="btn-back" @onclick="Voltar" title="Voltar">
                 <span>←</span>
             </button>
-            <div>
-                <h1>Novo Cliente</h1>
-                <p class="subtitle">Adicione um novo cliente ao sistema</p>
+            <div class="header-text">
+                <h1>@(novoCliente.Id > 0 ? "Cliente" : "Cliente")</h1>
+            </div>
+
+            @* Botões movidos para o topo *@
+            <div class="actions-right">
+                <button type="button" class="btn btn-primary" @onclick="SalvarCliente" disabled="@salvando">
+                    @if (salvando)
+                    {
+                        <span class="spinner"></span>
+                        <span>Salvando...</span>
+                    }
+                    else
+                    {
+                        <span>💾 Salvar</span>
+                    }
+                </button>
+
+                @if (novoCliente.Id > 0)
+                {
+                    <button type="button" class="btn btn-delete" @onclick="ExcluirCliente">
+                        <span>🗑️ Excluir</span>
+                    </button>
+                }
             </div>
         </div>
     </div>
@@ -28,59 +53,30 @@
             <DataAnnotationsValidator />
 
             <div class="form-grid">
-                <!-- Nome -->
                 <div class="form-group full-width">
                     <label for="nome">Nome Completo *</label>
-                    <InputText id="nome" class="form-control" @bind-Value="novoCliente.Nome"
-                               placeholder="Ex: João da Silva" />
+                    <InputText id="nome" class="form-control" @bind-Value="novoCliente.Nome" placeholder="Ex: João da Silva" />
                     <ValidationMessage For="@(() => novoCliente.Nome)" />
                 </div>
 
-                <!-- Telefone -->
                 <div class="form-group">
                     <label for="telefone">Telefone *</label>
-                    <InputText id="telefone"
-                               class="form-control"
-                               @bind-Value="novoCliente.Telefone"
-                               @oninput="AplicarMascaraTelefone"
-                               maxlength="15"
-                               placeholder="(00) 000000000" />
+                    <InputText id="telefone" class="form-control" @bind-Value="novoCliente.Telefone"
+                               @oninput="AplicarMascaraTelefone" maxlength="15" placeholder="(00) 00000-0000" />
                     <ValidationMessage For="@(() => novoCliente.Telefone)" />
                 </div>
 
-                <!-- Email -->
                 <div class="form-group">
                     <label for="email">E-mail *</label>
-                    <InputText id="email" type="email" class="form-control" @bind-Value="novoCliente.Email"
-                               placeholder="exemplo@email.com" />
+                    <InputText id="email" type="email" class="form-control" @bind-Value="novoCliente.Email" placeholder="exemplo@email.com" />
                     <ValidationMessage For="@(() => novoCliente.Email)" />
                 </div>
 
-                <!-- Endereço -->
                 <div class="form-group full-width">
                     <label for="endereco">Endereço Completo *</label>
-                    <InputText id="endereco" class="form-control" @bind-Value="novoCliente.Endereco"
-                               placeholder="Rua, Número, Bairro - Cidade/UF" />
+                    <InputText id="endereco" class="form-control" @bind-Value="novoCliente.Endereco" placeholder="Rua, Número, Bairro - Cidade/UF" />
                     <ValidationMessage For="@(() => novoCliente.Endereco)" />
                 </div>
-            </div>
-
-            <!-- Botões de Ação -->
-            <div class="form-actions">
-                <button type="button" class="btn btn-secondary" @onclick="Voltar" disabled="@salvando">
-                    Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary" disabled="@salvando">
-                    @if (salvando)
-                    {
-                        <span class="spinner"></span>
-                        <span>Salvando...</span>
-                    }
-                    else
-                    {
-                        <span>💾 Criar Cliente</span>
-                    }
-                </button>
             </div>
         </EditForm>
     </div>
@@ -259,6 +255,57 @@
         }
     }
 
+    /* Loading State */
+    .loading-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    .loading-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    /* Error State */
+    .error-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .error-icon {
+        font-size: 4rem;
+        margin-bottom: 16px;
+    }
+
+    .error-container h3 {
+        color: #2d3748;
+        font-size: 1.8rem;
+        margin: 0 0 12px 0;
+    }
+
+    .error-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0 0 24px 0;
+    }
+
     /* Responsivo */
     @@media (max-width: 768px) {
         .form-grid {
@@ -291,6 +338,56 @@
             font-size: 2rem;
         }
     }
+
+    .header-content {
+        display: flex;
+        align-items: center; /* Alinha verticalmente com os botões */
+        gap: 16px;
+        width: 100%;
+    }
+
+    .header-text {
+        flex: 1; /* Faz o texto ocupar o espaço central */
+    }
+
+    .actions-right {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .btn-delete {
+        background: #fff5f5;
+        color: #c53030;
+        border: 2px solid #feb2b2;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .btn-delete:hover {
+            background: #feb2b2;
+            color: white;
+        }
+
+    /* Ajuste responsivo para os botões no topo */
+    @@media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .actions-right {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+            .actions-right .btn {
+                flex: 1;
+            }
+    }
 </style>
 
 @code {
@@ -303,43 +400,54 @@
     };
 
     private bool salvando = false;
+    private JanelaConfirmacao? janelaConfirmacao;
 
     private async Task SalvarCliente()
     {
-        salvando = true;
+        if (string.IsNullOrWhiteSpace(novoCliente.Nome)) return;
 
+        salvando = true;
         try
         {
             await ClienteService.CriarAsync(novoCliente);
-
             ToastService.Success("Cliente criado com sucesso!");
-            Navigation.NavigateTo("/clientes");
+            await Task.Delay(700);
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Erro ao criar cliente: {ex.Message}");
+            ToastService.Error($"Erro ao salvar: {ex.Message}");
         }
-        finally
+        finally { salvando = false; }
+    }
+
+    private async Task ExcluirCliente()
+    {
+        if (janelaConfirmacao != null && await janelaConfirmacao.Show())
         {
-            salvando = false;
+            try
+            {
+                await ClienteService.ExcluirAsync(novoCliente.Id);
+                ToastService.Success("Cliente excluído!");
+                Navigation.NavigateTo("/clientes");
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Erro ao excluir cliente.");
+            }
         }
     }
 
-    private void Voltar()
-    {
-        Navigation.NavigateTo("/clientes");
-    }
+    private void Voltar() => Navigation.NavigateTo("/clientes");
 
     private void AplicarMascaraTelefone(ChangeEventArgs e)
     {
-        if (novoCliente == null) return;
-
-        var numeros = new string(e.Value?.ToString()?.Where(char.IsDigit).ToArray() ?? Array.Empty<char>());
+        var val = e.Value?.ToString() ?? "";
+        var numeros = new string(val.Where(char.IsDigit).ToArray());
 
         if (numeros.Length > 11) numeros = numeros.Substring(0, 11);
 
         if (numeros.Length <= 2)
-            novoCliente.Telefone = $"({numeros}";
+            novoCliente.Telefone = numeros.Length > 0 ? $"({numeros}" : "";
         else if (numeros.Length <= 7)
             novoCliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2)}";
         else

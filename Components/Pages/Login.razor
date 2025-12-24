@@ -1,0 +1,260 @@
+﻿@page "/login"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using PhotoStudio.app.Services
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<PageTitle>Login - Estúdio de Fotografia</PageTitle>
+
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo-circle">
+                    <span>📸</span>
+                </div>
+                <h1>Photo Studio</h1>
+                <p>Acesse sua conta para gerenciar seus ensaios</p>
+            </div>
+
+            <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+
+                <div class="form-group">
+                    <label>E-mail</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">✉️</span>
+                        <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="seu@email.com" />
+                    </div>
+                    <ValidationMessage For="@(() => loginModel.Email)" />
+                </div>
+
+                <div class="form-group">
+                    <label>Senha</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">🔒</span>
+                        <InputText @bind-Value="loginModel.Senha" type="password" class="form-control" placeholder="••••••••" />
+                    </div>
+                    <ValidationMessage For="@(() => loginModel.Senha)" />
+                </div>
+
+                <div class="login-options">
+                    <label class="remember-me">
+                        <input type="checkbox" /> Lembrar de mim
+                    </label>
+                    <a href="javascript:void(0)" class="forgot-password">Esqueceu a senha?</a>
+                </div>
+
+                <button type="submit" class="btn-login" disabled="@isAuthenticating">
+                    @if (isAuthenticating)
+                    {
+                        <span class="spinner"></span>
+                        <span>Autenticando...</span>
+                    }
+                    else
+                    {
+                        <span>Entrar no Sistema</span>
+                    }
+                </button>
+            </EditForm>
+        </div>
+        <p class="login-footer">© 2024 Photo Studio App - Todos os direitos reservados</p>
+    </div>
+</div>
+
+<style>
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #f6f8fb 0%, #e2e8f0 100%);
+        padding: 20px;
+    }
+
+    .login-container {
+        width: 100%;
+        max-width: 420px;
+    }
+
+    .login-card {
+        background: white;
+        padding: 40px;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    }
+
+    .login-header {
+        text-align: center;
+        margin-bottom: 32px;
+    }
+
+    .logo-circle {
+        width: 64px;
+        height: 64px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        margin: 0 auto 16px;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .login-header h1 {
+        font-size: 1.8rem;
+        color: #2d3748;
+        margin: 0 0 8px 0;
+    }
+
+    .login-header p {
+        color: #718096;
+        font-size: 0.95rem;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+    .input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-icon {
+        position: absolute;
+        left: 12px;
+        color: #a0aec0;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 12px 12px 12px 40px;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        transition: all 0.2s;
+        font-size: 1rem;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+    .login-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        font-size: 0.85rem;
+    }
+
+    .remember-me {
+        color: #718096;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+    }
+
+    .forgot-password {
+        color: #667eea;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .btn-login {
+        width: 100%;
+        padding: 14px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+        .btn-login:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+    .login-footer {
+        text-align: center;
+        margin-top: 24px;
+        color: #a0aec0;
+        font-size: 0.8rem;
+    }
+
+    .spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+@code {
+    private LoginViewModel loginModel = new();
+    private bool isAuthenticating = false;
+
+    private async Task HandleLogin()
+    {
+        isAuthenticating = true;
+
+        // Simulação de autenticação
+        await Task.Delay(1500);
+
+        if (loginModel.Email == "admin@estudio.com" && loginModel.Senha == "123456")
+        {
+            ToastService.Success("Bem-vindo de volta!");
+            Navigation.NavigateTo("/");
+        }
+        else
+        {
+            ToastService.Error("E-mail ou senha inválidos.");
+            isAuthenticating = false;
+        }
+    }
+
+    public class LoginViewModel
+    {
+        [Required(ErrorMessage = "O e-mail é obrigatório")]
+        [EmailAddress(ErrorMessage = "E-mail inválido")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "A senha é obrigatória")]
+        public string Senha { get; set; } = string.Empty;
+    }
+}
