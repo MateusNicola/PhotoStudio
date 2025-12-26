@@ -1,0 +1,349 @@
+﻿@page "/usuarios/editar/{Id:int}"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "admin")]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<PageTitle>Editar Usuário - Photo Studio</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <div class="header-content">
+            <button class="btn-back" @onclick="Voltar" title="Voltar">
+                <span>←</span>
+            </button>
+            <div class="header-text">
+                <h1>Editar Usuário</h1>
+                <p class="subtitle">Altere as informações ou a senha do fotógrafo</p>
+            </div>
+
+            <div class="actions-right">
+                <button type="button" class="btn btn-primary" @onclick="HandleUpdate" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner"></span>
+                        <span>Salvando...</span>
+                    }
+                    else
+                    {
+                        <span>💾 Salvar Alterações</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        @if (userModel == null)
+        {
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Carregando dados do usuário...</p>
+            </div>
+        }
+        else
+        {
+            <EditForm Model="@editModel" OnValidSubmit="HandleUpdate">
+                <DataAnnotationsValidator />
+
+                <div class="form-grid">
+                    @* NOME COMPLETO *@
+                    <div class="form-group full-width">
+                        <label for="nome">Nome Completo *</label>
+                        <InputText id="nome" class="form-control" @bind-Value="editModel.Nome" placeholder="Ex: João da Silva" />
+                        <ValidationMessage For="@(() => editModel.Nome)" class="validation-message" />
+                    </div>
+
+                    @* LOGIN *@
+                    <div class="form-group full-width">
+                        <label for="login">Usuário de Acesso (Login) *</label>
+                        <InputText id="login" class="form-control" @bind-Value="editModel.Identificacao" placeholder="Ex: joao.silva" />
+                        <ValidationMessage For="@(() => editModel.Identificacao)" class="validation-message" />
+                    </div>
+
+                    @* SENHAS *@
+                    <div class="form-group">
+                        <label for="senha">Nova Senha (deixe em branco para manter)</label>
+                        <InputText id="senha" type="password" class="form-control" @bind-Value="editModel.Senha" placeholder="••••••••" />
+                        <ValidationMessage For="@(() => editModel.Senha)" class="validation-message" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmar">Confirmar Nova Senha</label>
+                        <InputText id="confirmar" type="password" class="form-control" @bind-Value="editModel.ConfirmarSenha" placeholder="••••••••" />
+                        <ValidationMessage For="@(() => editModel.ConfirmarSenha)" class="validation-message" />
+                    </div>
+                </div>
+            </EditForm>
+        }
+    </div>
+</div>
+
+<style>
+    .page-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+    }
+
+    .btn-back {
+        background: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #4a5568;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .btn-back:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+            transform: translateX(-4px);
+        }
+
+    .header-text {
+        flex: 1;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin: 0 0 4px 0;
+    }
+
+    .subtitle {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .actions-right {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+    label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background: white;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+    .validation-message {
+        color: #e53e3e;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    .btn {
+        padding: 12px 32px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    .loading-container {
+        text-align: center;
+        padding: 40px;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .actions-right {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+            .actions-right .btn {
+                flex: 1;
+            }
+    }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private UsuarioModel? userModel;
+    private EditViewModel editModel = new();
+    private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        userModel = await AuthService.ObterPorIdAsync(Id);
+        if (userModel != null)
+        {
+            editModel.Nome = userModel.Nome;
+            // Verifique se no seu modelo é .Login ou .Identificacao
+            editModel.Identificacao = userModel.Identificacao;
+        }
+        else
+        {
+            ToastService.Error("Usuário não encontrado.");
+            Navigation.NavigateTo("/usuarios");
+        }
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (isProcessing || userModel == null) return;
+
+        isProcessing = true;
+        try
+        {
+            userModel.Nome = editModel.Nome;
+            userModel.Identificacao = editModel.Identificacao;
+
+            var sucesso = await AuthService.AtualizarUsuarioAsync(userModel, editModel.Senha);
+
+            if (sucesso)
+            {
+                ToastService.Success("Usuário atualizado com sucesso!");
+                Navigation.NavigateTo("/usuarios");
+            }
+            else
+            {
+                ToastService.Error("Erro ao atualizar usuário.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Erro de conexão com o banco.");
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void Voltar() => Navigation.NavigateTo("/usuarios");
+
+    public class EditViewModel
+    {
+        [Required(ErrorMessage = "O nome é obrigatório")]
+        public string Nome { get; set; } = "";
+
+        [Required(ErrorMessage = "O login é obrigatório")]
+        public string Identificacao { get; set; } = "";
+
+        [MinLength(6, ErrorMessage = "A senha deve ter no mínimo 6 caracteres")]
+        public string? Senha { get; set; }
+
+        [Compare("Senha", ErrorMessage = "As senhas não conferem")]
+        public string? ConfirmarSenha { get; set; }
+    }
+}

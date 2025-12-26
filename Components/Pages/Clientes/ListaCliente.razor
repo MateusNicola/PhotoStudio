@@ -1,5 +1,6 @@
 ﻿@page "/clientes"
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
 @using PhotoStudio.app.Components.Shared
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Services
@@ -7,6 +8,7 @@
 @inject ClienteService ClienteService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@attribute [Authorize]
 
 <PageTitle>Clientes</PageTitle>
 
@@ -492,7 +494,7 @@
         try
         {
             // A página apenas solicita os dados
-            clientes = await ClienteService.ObterTodosAsync();
+            clientes = await ClienteService.ListarTodosAsync();
             AplicarFiltro();
         }
         catch (Exception ex)

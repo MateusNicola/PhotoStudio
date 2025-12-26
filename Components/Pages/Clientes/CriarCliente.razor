@@ -1,5 +1,6 @@
 ﻿@page "/clientes/criarCliente"
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Services
@@ -8,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 @inject ClienteService ClienteService
+@attribute [Authorize]
 
 <PageTitle>Cliente - Estúdio de Fotografia</PageTitle>
 

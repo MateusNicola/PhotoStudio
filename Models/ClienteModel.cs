@@ -22,5 +22,7 @@ namespace PhotoStudio.app.Models
 
         [Column("criado_em")]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+        public string UsuarioId { get; set; }
     }
 }

@@ -1,11 +1,15 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Services
 @inject NavigationManager Navigation
 @inject DashboardService DashboardService
 @inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
 
 <PageTitle>Dashboard - Estúdio de Fotografia</PageTitle>
 
@@ -13,8 +17,10 @@
     <!-- Header -->
     <div class="dashboard-header">
         <div class="header-info">
-            <h1 class="dashboard-title">Dashboard</h1>
-            <p class="dashboard-subtitle">Visão geral do seu estúdio</p>
+            <h1 class="dashboard-title">
+                Olá, @userName!
+            </h1>
+            <p class="dashboard-subtitle">Seja bem-vindo ao painel do seu estúdio</p>
         </div>
 
         <div class="header-actions">
@@ -77,123 +83,46 @@
         </div>
     </div>
 
-    <!-- Grid: Calendário + Próximos Ensaios -->
-    <div class="content-grid">
-        <!-- Calendário -->
-        <div class="calendar-section">
-            <div class="section-card">
-                <div class="calendar-header">
-                    <button class="nav-btn" @onclick="MesAnterior">‹</button>
-                    <h2 class="calendar-title">@dataAtual.ToString("MMMM yyyy")</h2>
-                    <button class="nav-btn" @onclick="ProximoMes">›</button>
-                </div>
+    <div class="proximos-ensaios-container">
+        <div class="section-card full-width-card">
+            <div class="section-header-row">
+                <h3 class="section-title">
+                    <span class="title-icon">🗓️</span> Próximos Ensaios da Agenda
+                </h3>
+                <button class="btn-link" @onclick='() => Navigation.NavigateTo("ensaios")'>Ver todos</button>
+            </div>
 
-                <div class="calendar">
-                    <div class="calendar-weekdays">
-                        <div class="weekday">Dom</div>
-                        <div class="weekday">Seg</div>
-                        <div class="weekday">Ter</div>
-                        <div class="weekday">Qua</div>
-                        <div class="weekday">Qui</div>
-                        <div class="weekday">Sex</div>
-                        <div class="weekday">Sáb</div>
-                    </div>
-
-                    <div class="calendar-days">
-                        @foreach (var diaCalendario in ObterDiasCalendario())
-                        {
-                            @if (diaCalendario == null)
-                            {
-                                <div class="calendar-day vazio"></div>
-                            }
-                            else
-                            {
-                                // Note que aqui usamos 'diaCalendario' para evitar o erro de escopo
-                                var ensaiosDoDia = ObterEnsaiosDoDia(diaCalendario);
-                                var isHoje = diaCalendario.Value.Date == DateTime.Today;
-                                var isSelecionado = diaSelecionado.HasValue && diaSelecionado.Value.Date == diaCalendario.Value.Date;
-
-                                <div class="calendar-day @(isHoje ? "hoje" : "") @(isSelecionado ? "selecionado" : "")"
-                                     @onclick="() => SelecionarDia(diaCalendario.Value)">
-
-                                    <span class="day-number">@diaCalendario.Value.Day</span>
-
-                                    @if (ensaiosDoDia.Any())
-                                    {
-                                        <div class="ensaios-lista">
-                                            @foreach (var ensaio in ensaiosDoDia.Take(2))
-                                            {
-                                                <div class="ensaio-badge" style="border-left-color:@ObterCorTipo(ensaio.Tipo)">
-                                                    @ensaio.Titulo
-                                                </div>
-                                            }
-                                        </div>
-                                    }
+            <div class="ensaios-horizontal-list">
+                @if (ensaios.Any(e => e.Data >= DateTime.Today))
+                {
+                    @foreach (var ensaio in ensaios.Where(e => e.Data >= DateTime.Today).OrderBy(e => e.Data).Take(7))
+                    {
+                        var diasRestantes = (ensaio.Data.Date - DateTime.Today).Days;
+                        <div class="ensaio-horizontal-item" @onclick="() => EditarEnsaio(ensaio.Id)">
+                            <div class="date-badge">
+                                <span class="month">@ensaio.Data.ToString("MMM")</span>
+                                <span class="day">@ensaio.Data.Day</span>
+                            </div>
+                            <div class="ensaio-info">
+                                <h4>@ensaio.Titulo</h4>
+                                <div class="ensaio-meta">
+                                    <span>🕐 @ensaio.Data.ToString("HH:mm")</span>
+                                    <span class="dias-contagem @(diasRestantes <= 2 ? "urgente" : "")">
+                                        @(diasRestantes == 0 ? "Hoje" : diasRestantes == 1 ? "Amanhã" : $"Em {diasRestantes} dias")
+                                    </span>
                                 </div>
-                            }
-                        }
-                    </div>
-                </div>
+                            </div>
+                            <div class="tipo-tag" style="background: @ObterCorTipo(ensaio.Tipo)"></div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="empty-msg">Não há ensaios futuros agendados.</p>
+                }
             </div>
         </div>
     </div>
-
-    <!-- Detalhes do Dia Selecionado -->
-    @if (diaSelecionado.HasValue)
-    {
-        var ensaiosDia = ObterEnsaiosDoDia(diaSelecionado.Value);
-        <div class="detalhes-dia" @ref="detalhesDiaRef">
-            <div class="detalhes-header">
-                <h3>
-                    Ensaios em @diaSelecionado.Value.ToString("dd/MM/yyyy")
-                    <small style="color:#718096; font-weight:500;">
-                        (@ensaiosDia.Count)
-                    </small>
-                </h3>
-
-                <button class="btn-fechar" @onclick="FecharDetalhes">✕</button>
-            </div>
-
-            @if (ensaiosDia.Any())
-            {
-                <div class="lista-ensaios">
-                    @foreach (var ensaio in ensaiosDia.OrderBy(e => e.Data))
-                    {
-                        var cliente = clientes.FirstOrDefault(c => c.Id == ensaio.ClienteId);
-                        <div class="ensaio-item" @onclick="() => EditarEnsaio(ensaio.Id)">
-                            <div class="ensaio-header">
-                                <div class="header-left">
-                                    <span class="tipo-badge" style="background: @ObterCorTipo(ensaio.Tipo)">
-                                        @ensaio.Tipo
-                                    </span>
-                                    <span class="situacao-badge" style="background: @ObterCorSituacao(ensaio.Situacao)">
-                                        @ensaio.Situacao
-                                    </span>
-                                </div>
-                                <span class="ensaio-hora">🕐 @ensaio.Data.ToString("HH:mm")</span>
-                            </div>
-                            <h4>@ensaio.Titulo</h4>
-                            <div class="ensaio-detalhes">
-                                <p><strong>👤 Cliente:</strong> @(cliente?.Nome ?? "N/A")</p>
-                                <p><strong>📍 Local:</strong> @ensaio.Local</p>
-                                @if (ensaio.Valor.HasValue)
-                                {
-                                    <p><strong>💰 Valor:</strong> @ensaio.Valor.Value.ToString("C")</p>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="empty-state">
-                    <span class="empty-icon">📷</span>
-                    <p>Nenhum ensaio agendado para este dia</p>
-                </div>
-            }
-        </div>
-    }
 </div>
 
 <style>
@@ -215,9 +144,13 @@
     }
 
     .dashboard-title {
-        font-size: 2rem;
-        margin: 0 0 2px 0;
-        color: #2d3748;
+        font-size: 2.2rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin: 0 0 4px 0;
     }
 
     .dashboard-subtitle {
@@ -800,6 +733,119 @@
 
     }
 
+    .proximos-ensaios-container {
+        margin-bottom: 24px;
+    }
+
+    .full-width-card {
+        width: 100%;
+        border-top: 4px solid #667eea;
+    }
+
+    .section-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .btn-link {
+        background: none;
+        border: none;
+        color: #667eea;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .ensaios-horizontal-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
+    }
+
+    .ensaio-horizontal-item {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px;
+        background: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .ensaio-horizontal-item:hover {
+            background: white;
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
+        }
+
+    .date-badge {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #edf2ff;
+        color: #4c51bf;
+        min-width: 50px;
+        height: 55px;
+        border-radius: 8px;
+        font-weight: 700;
+    }
+
+        .date-badge .month {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+        }
+
+        .date-badge .day {
+            font-size: 1.2rem;
+        }
+
+    .ensaio-info h4 {
+        margin: 0;
+        font-size: 0.95rem;
+        color: #2d3748;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+
+    .ensaio-meta {
+        display: flex;
+        gap: 10px;
+        font-size: 0.8rem;
+        margin-top: 4px;
+    }
+
+    .dias-contagem {
+        color: #718096;
+        font-weight: 600;
+    }
+
+        .dias-contagem.urgente {
+            color: #e53e3e;
+        }
+
+    .tipo-tag {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+    }
+
+    .empty-msg {
+        color: #a0aec0;
+        font-style: italic;
+    }
+
 </style>
 
 <script>
@@ -823,8 +869,11 @@
     private decimal faturamentoMes;
     private int ensaiosConcluidosMes;
 
+    private string userName = "Usuário";
+
     protected override async Task OnInitializedAsync()
     {
+        await ObterNomeUsuario();
         await CarregarDashboard();
     }
 
@@ -910,4 +959,22 @@
         Situacao.Confirmado => "#d69e2e",
         _ => "#a0aec0"
     };
+
+    private async Task ObterNomeUsuario()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            var claimNome = user.FindFirst("Nome")?.Value;
+
+            userName = claimNome ?? user.Identity.Name ?? "Usuário";
+
+            if (userName.Contains(" "))
+            {
+                userName = userName.Split(' ')[0];
+            }
+        }
+    }
 }

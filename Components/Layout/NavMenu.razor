@@ -1,4 +1,5 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">Photo Studio App</a>
     </div>
@@ -6,25 +7,80 @@
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
+@* Adicionamos a classe 'nav-container' para controlar o layout *@
+<div class="nav-scrollable nav-container" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column nav-content">
+        @* Itens do topo *@
+        <div class="nav-items-top">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="clientes">
+                    <span class="bi bi-person-circle-fill-nav-menu" aria-hidden="true"></span> Clientes
+                </NavLink>
+            </div>
+
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="ensaios">
+                    <span class="bi bi-camera-nav-menu" aria-hidden="true"></span> Ensaios
+                </NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="alterar-senha">
+                    <span class="bi bi-key-fill-nav-menu" aria-hidden="true"></span> Alterar Senha
+                </NavLink>
+            </div>
+            <AuthorizeView Roles="admin">
+                <Authorized>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="usuarios">
+                            <span class="bi bi-person-circle-fill-nav-menu" aria-hidden="true"></span>Cadastrar Fotógrafo
+                        </NavLink>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="clientes">
-                <span class="bi bi-person-circle-fill-nav-menu" aria-hidden="true"></span> Clientes
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="ensaios">
-                <span class="bi bi-camera-nav-menu" aria-hidden="true"></span> Ensaios
-            </NavLink>
+        @* Item do fundo *@
+        <div class="nav-items-bottom">
+            <hr style="border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 20px;" />
+            <div class="nav-item px-3">
+                <a class="nav-link logout-link" href="api/auth/logout">
+                    <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Sair do Sistema
+                </a>
+            </div>
         </div>
     </nav>
 </div>
 
+<style>
+    /* Faz o container ocupar o espaço total e ser um flexbox vertical */
+    .nav-container {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 3.5rem); /* Desconta a altura da top-row */
+    }
+
+    .nav-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between; /* Empurra o conteúdo para as extremidades */
+        height: 100%;
+    }
+
+    /* Estilização específica do botão de Sair */
+    .logout-link {
+        cursor: pointer;
+        color: #ff6b6b !important;
+        transition: background-color 0.2s;
+        margin-bottom: 15px; /* Margem extra no rodapé */
+    }
+
+        .logout-link:hover {
+            background-color: rgba(255, 107, 107, 0.1) !important;
+        }
+</style>

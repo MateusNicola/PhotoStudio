@@ -9,7 +9,7 @@ namespace PhotoStudio.app.Data
             : base(options) { }
 
         public DbSet<EnsaioModel> Ensaios => Set<EnsaioModel>();
-
         public DbSet<ClienteModel> Clientes => Set<ClienteModel>();
+        public DbSet<UsuarioModel> Usuarios { get; set; }
     }
 }

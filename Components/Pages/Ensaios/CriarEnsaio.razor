@@ -1,5 +1,6 @@
 ﻿@page "/ensaios/criarEnsaio"
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.JSInterop
 @using PhotoStudio.app.Components.Shared
 @using PhotoStudio.app.Data
@@ -11,6 +12,7 @@
 @inject EnsaioService EnsaioService
 @inject ClienteService ClienteService
 @inject ToastService ToastService
+@attribute [Authorize]
 
 <PageTitle>Ensaio - Estúdio de Fotografia</PageTitle>
 <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Ensaio" Message="Tem certeza que deseja excluir este ensaio? Esta ação não pode ser desfeita." />
@@ -494,8 +496,8 @@
                 await EnsaioService.CriarAsync(novoEnsaio);
                 idEnsaioCriado = 1;
                 ToastService.Success("Ensaio criado com sucesso!");
-
                 await Task.Delay(1000);
+                Navigation.NavigateTo("/ensaios");
             }
             else
             {

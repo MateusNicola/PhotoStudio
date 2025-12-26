@@ -1,5 +1,6 @@
 ﻿@page "/ensaios/editarEnsaio/{EnsaioId:int}"
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
 @using PhotoStudio.app.Components.Shared
 @using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
@@ -10,6 +11,7 @@
 @inject ClienteService ClienteService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@attribute [Authorize]
 
 <PageTitle>Ensaio - Estúdio de Fotografia</PageTitle>
 <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Ensaio" Message="Tem certeza que deseja excluir este ensaio? Esta ação não pode ser desfeita." />

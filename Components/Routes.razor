@@ -1,6 +1,32 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly">
+        <Found Context="routeData">
+            @* O AuthorizeRouteView substitui o RouteView comum *@
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    @if (context.User.Identity?.IsAuthenticated != true)
+                    {
+                        @* Se não estiver logado, redireciona para /login *@
+                        <RedirectToLogin />
+                    }
+                    else
+                    {
+                        <div class="p-4">
+                            <h1>Acesso Negado</h1>
+                            <p>Você não tem permissão para ver esta página.</p>
+                        </div>
+                    }
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Não encontrado</PageTitle>
+            <LayoutView Layout="typeof(Layout.MainLayout)">
+                <p role="alert">Desculpe, não há nada neste endereço.</p>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

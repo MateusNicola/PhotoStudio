@@ -1,0 +1,303 @@
+﻿@page "/registrar"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "admin")]
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Services
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<PageTitle>Novo Usuário - Photo Studio</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <div class="header-content">
+            <button class="btn-back" @onclick="Voltar" title="Voltar">
+                <span>←</span>
+            </button>
+            <div class="header-text">
+                <h1>Novo Usuário</h1>
+                <p class="subtitle">Cadastre um novo fotógrafo no sistema</p>
+            </div>
+
+            <div class="actions-right">
+                <button type="button" class="btn btn-primary" @onclick="HandleRegistration" disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner"></span>
+                        <span>Salvando...</span>
+                    }
+                    else
+                    {
+                        <span>💾 Registrar Usuário</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <EditForm Model="@regModel" OnValidSubmit="HandleRegistration">
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                @* NOME COMPLETO *@
+                <div class="form-group full-width">
+                    <label for="nome">Nome Completo *</label>
+                    <InputText id="nome" class="form-control" @bind-Value="regModel.Nome" placeholder="Ex: João da Silva" />
+                    <ValidationMessage For="@(() => regModel.Nome)" class="validation-message" />
+                </div>
+
+                @* LOGIN *@
+                <div class="form-group full-width">
+                    <label for="login">Usuário de Acesso (Login) *</label>
+                    <InputText id="login" class="form-control" @bind-Value="regModel.Identificacao" placeholder="Ex: joao.silva" />
+                    <ValidationMessage For="@(() => regModel.Identificacao)" class="validation-message" />
+                </div>
+
+                @* SENHAS *@
+                <div class="form-group">
+                    <label for="senha">Senha *</label>
+                    <InputText id="senha" type="password" class="form-control" @bind-Value="regModel.Senha" placeholder="••••••••" />
+                    <ValidationMessage For="@(() => regModel.Senha)" class="validation-message" />
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmar">Confirmar Senha *</label>
+                    <InputText id="confirmar" type="password" class="form-control" @bind-Value="regModel.ConfirmarSenha" placeholder="••••••••" />
+                    <ValidationMessage For="@(() => regModel.ConfirmarSenha)" class="validation-message" />
+                </div>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    /* Reaproveitando os estilos da página de clientes para manter o padrão */
+    .page-container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+    }
+
+    .btn-back {
+        background: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #4a5568;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .btn-back:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+            transform: translateX(-4px);
+        }
+
+    .header-text {
+        flex: 1;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin: 0 0 4px 0;
+    }
+
+    .subtitle {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .actions-right {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+    label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background: white;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+    .validation-message {
+        color: #e53e3e;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    .btn {
+        padding: 12px 32px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .header-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .actions-right {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+            .actions-right .btn {
+                flex: 1;
+            }
+    }
+</style>
+
+@code {
+    private RegistroViewModel regModel = new();
+    private bool isProcessing = false;
+
+    private void Voltar() => Navigation.NavigateTo("/usuarios");
+
+    private async Task HandleRegistration()
+    {
+        if (isProcessing) return;
+
+        isProcessing = true;
+        try
+        {
+            var sucesso = await AuthService.RegistrarUsuarioAsync(regModel.Nome, regModel.Identificacao, regModel.Senha);
+
+            if (sucesso)
+            {
+                ToastService.Success("Usuário cadastrado com sucesso!");
+                regModel = new(); // Limpa campos
+                await Task.Delay(1000);
+            }
+            else
+            {
+                ToastService.Error("Este nome de usuário já está em uso.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Erro ao salvar no banco de dados.");
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    public class RegistroViewModel
+    {
+        [Required(ErrorMessage = "O nome completo é obrigatório")]
+        public string Nome { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Informe um nome de usuário")]
+        [StringLength(20, MinimumLength = 3, ErrorMessage = "O usuário deve ter entre 3 e 20 caracteres")]
+        public string Identificacao { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "A senha é obrigatória")]
+        [MinLength(6, ErrorMessage = "A senha deve ter no mínimo 6 caracteres")]
+        public string Senha { get; set; } = string.Empty;
+
+        [Compare("Senha", ErrorMessage = "As senhas não conferem")]
+        public string ConfirmarSenha { get; set; } = string.Empty;
+    }
+}

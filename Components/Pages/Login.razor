@@ -1,9 +1,15 @@
 ﻿@page "/login"
+@layout EmptyLayout
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Authorization
+@using PhotoStudio.app.Components.Layout
 @using PhotoStudio.app.Services
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject AuthService AuthService
+@inject NavigationManager Nav
+@attribute [AllowAnonymous]
 
 <PageTitle>Login - Estúdio de Fotografia</PageTitle>
 
@@ -17,53 +23,33 @@
                 <h1>Photo Studio</h1>
                 <p>Acesse sua conta para gerenciar seus ensaios</p>
             </div>
-
-            <EditForm Model="@loginModel" OnValidSubmit="HandleLogin">
-                <DataAnnotationsValidator />
-
+            <form method="post" action="api/auth/login">
                 <div class="form-group">
-                    <label>E-mail</label>
+                    <label>Usuário</label>
                     <div class="input-wrapper">
-                        <span class="input-icon">✉️</span>
-                        <InputText @bind-Value="loginModel.Email" class="form-control" placeholder="seu@email.com" />
+                        <span class="input-icon">👤</span>
+                        <input name="identificacao" class="form-control" required placeholder="Insira a indetificação (Exemplo: admin)" />
                     </div>
-                    <ValidationMessage For="@(() => loginModel.Email)" />
                 </div>
 
                 <div class="form-group">
                     <label>Senha</label>
                     <div class="input-wrapper">
                         <span class="input-icon">🔒</span>
-                        <InputText @bind-Value="loginModel.Senha" type="password" class="form-control" placeholder="••••••••" />
+                        <input name="senha" type="password" class="form-control" required placeholder="******" />
                     </div>
-                    <ValidationMessage For="@(() => loginModel.Senha)" />
                 </div>
 
-                <div class="login-options">
-                    <label class="remember-me">
-                        <input type="checkbox" /> Lembrar de mim
-                    </label>
-                    <a href="javascript:void(0)" class="forgot-password">Esqueceu a senha?</a>
-                </div>
-
-                <button type="submit" class="btn-login" disabled="@isAuthenticating">
-                    @if (isAuthenticating)
-                    {
-                        <span class="spinner"></span>
-                        <span>Autenticando...</span>
-                    }
-                    else
-                    {
-                        <span>Entrar no Sistema</span>
-                    }
-                </button>
-            </EditForm>
+                <button type="submit" class="btn-login">Entrar no Sistema</button>
+            </form>
         </div>
-        <p class="login-footer">© 2024 Photo Studio App - Todos os direitos reservados</p>
+        <p class="login-footer">© 2025 Photo Studio App - Todos os direitos reservados</p>
     </div>
 </div>
 
 <style>
+
+    /* ... (Mantenha o seu CSS atual, ele está correto e bonito) ... */
     .login-page {
         min-height: 100vh;
         display: flex;
@@ -229,30 +215,10 @@
     private LoginViewModel loginModel = new();
     private bool isAuthenticating = false;
 
-    private async Task HandleLogin()
-    {
-        isAuthenticating = true;
-
-        // Simulação de autenticação
-        await Task.Delay(1500);
-
-        if (loginModel.Email == "admin@estudio.com" && loginModel.Senha == "123456")
-        {
-            ToastService.Success("Bem-vindo de volta!");
-            Navigation.NavigateTo("/");
-        }
-        else
-        {
-            ToastService.Error("E-mail ou senha inválidos.");
-            isAuthenticating = false;
-        }
-    }
-
     public class LoginViewModel
     {
-        [Required(ErrorMessage = "O e-mail é obrigatório")]
-        [EmailAddress(ErrorMessage = "E-mail inválido")]
-        public string Email { get; set; } = string.Empty;
+        [Required(ErrorMessage = "A identificação é obrigatória")]
+        public string Identificacao { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "A senha é obrigatória")]
         public string Senha { get; set; } = string.Empty;

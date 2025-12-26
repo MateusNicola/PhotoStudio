@@ -1,0 +1,324 @@
+﻿@page "/usuarios"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "admin")]
+@using Microsoft.AspNetCore.Authorization
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Services
+@using PhotoStudio.app.Components.Shared
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Usuários - Photo Studio</PageTitle>
+
+@* Componente de confirmação para deletar usuários *@
+<JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Usuário" Message="Tem certeza que deseja remover o acesso deste fotógrafo?" />
+
+<div class="page-container">
+    <div class="page-header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1>Gerenciar Equipe</h1>
+                <p class="subtitle">Lista de fotógrafos e administradores com acesso ao sistema</p>
+            </div>
+
+            <div class="actions-right">
+                <button class="btn btn-primary" @onclick="IrParaNovoUsuario">
+                    <span>➕ Novo Usuário</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        @if (usuarios == null)
+        {
+            <div class="loading-state">
+                <div class="spinner-blue"></div>
+                <p>Carregando usuários...</p>
+            </div>
+        }
+        else if (!usuarios.Any())
+        {
+            <div class="empty-state">
+                <p>Nenhum usuário cadastrado além de você.</p>
+            </div>
+        }
+        else
+        {
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Login</th>
+                        <th>Perfil</th>
+                        <th style="text-align: right;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in usuarios)
+                    {
+                        <tr>
+                            <td>
+                                <div class="user-info">
+                                    <div class="user-avatar">@user.Nome[0].ToString().ToUpper()</div>
+                                    <span class="user-name">@user.Nome</span>
+                                </div>
+                            </td>
+                            <td>@user.Identificacao</td>
+                            <td>
+                                <span class="badge @(user.Perfil?.ToLower() == "admin" ? "badge-admin" : "badge-user")">
+                                    @(user.Perfil ?? "Fotógrafo")
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="actions-cell">
+                                    <button class="btn-action-edit" @onclick='() => Navigation.NavigateTo($"/usuarios/editar/{user.Id}")' title="Editar">
+                                        <span>✏️</span>
+                                    </button>
+
+                                    @if (user.Identificacao != usuarioLogado)
+                                    {
+                                        <button class="btn-action-delete" @onclick="() => ConfirmarExclusao(user)" title="Excluir">
+                                            <span>🗑️</span>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-you">(Você)</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<style>
+    .page-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+        width: 100%;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin: 0;
+    }
+
+    .subtitle {
+        color: #718096;
+        margin: 4px 0 0 0;
+        font-size: 1.1rem;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .custom-table th {
+            background: #f8fafc;
+            padding: 16px;
+            text-align: left;
+            color: #4a5568;
+            font-weight: 600;
+            border-bottom: 2px solid #edf2f7;
+        }
+
+        .custom-table td {
+            padding: 16px;
+            border-bottom: 1px solid #edf2f7;
+            color: #2d3748;
+            vertical-align: middle;
+        }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .user-avatar {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.85rem;
+    }
+
+    .badge {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .badge-admin {
+        background: #feebc8;
+        color: #9c4221;
+    }
+
+    .badge-user {
+        background: #e2e8f0;
+        color: #4a5568;
+    }
+
+    .badge-you {
+        font-size: 0.8rem;
+        color: #a0aec0;
+        font-style: italic;
+        margin-left: 8px;
+    }
+
+    .actions-cell {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-action-delete, .btn-action-edit {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 8px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .btn-action-delete:hover {
+            background: #fff5f5;
+            transform: scale(1.1);
+        }
+
+        .btn-action-edit:hover {
+            background: #f0fff4;
+            transform: scale(1.1);
+        }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+    .loading-state {
+        text-align: center;
+        padding: 60px;
+    }
+
+    .spinner-blue {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .actions-right {
+            width: 100%;
+        }
+
+        .btn-primary {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+@code {
+    private List<UsuarioModel>? usuarios;
+    private JanelaConfirmacao? janelaConfirmacao;
+    private string? usuarioLogado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        usuarioLogado = authState.User.Identity?.Name;
+        await CarregarUsuarios();
+    }
+
+    private async Task CarregarUsuarios()
+    {
+        usuarios = await AuthService.ListarTodosUsuariosAsync();
+    }
+
+    private void IrParaNovoUsuario() => Navigation.NavigateTo("/registrar");
+
+    private async Task ConfirmarExclusao(UsuarioModel user)
+    {
+        if (janelaConfirmacao != null && await janelaConfirmacao.Show())
+        {
+            try
+            {
+                var sucesso = await AuthService.ExcluirUsuarioAsync(user.Id);
+                if (sucesso)
+                {
+                    ToastService.Success("Usuário removido com sucesso.");
+                    await CarregarUsuarios();
+                }
+            }
+            catch (Exception)
+            {
+                ToastService.Error("Erro ao excluir usuário.");
+            }
+        }
+    }
+}

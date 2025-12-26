@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using PhotoStudio.app.Components;
 using PhotoStudio.app.Data;
@@ -10,6 +11,7 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+
 
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();
@@ -26,6 +28,23 @@ public class Program
                 builder.Services.AddDbContextFactory<AppDbContext>(options =>
             options.UseSqlServer(connectionString));
 
+        // Adicione o suporte a Cookies
+        builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie(options => {
+                options.LoginPath = "/login";
+                options.AccessDeniedPath = "/acesso-negado";
+                options.ExpireTimeSpan = TimeSpan.FromHours(8); // Sessão de 8 horas
+            });
+
+
+        // Antes do builder.Build()
+        builder.Services.AddControllers();
+
+        // Registre o AuthService e o HttpContextAccessor
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<AuthService>();
+        builder.Services.AddCascadingAuthenticationState();
+
         var app = builder.Build();
 
         if (!app.Environment.IsDevelopment())
@@ -37,7 +56,7 @@ public class Program
         app.UseHttpsRedirection();
         app.UseStaticFiles();
         app.UseAntiforgery();
-
+        app.MapControllers();
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode();
 

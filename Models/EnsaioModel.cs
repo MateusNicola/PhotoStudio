@@ -15,6 +15,7 @@ namespace PhotoStudio.app.Models
         [Column("cliente_id")]
         public required int ClienteId { get; set; }
         public ClienteModel Cliente { get; set; } = null!;
+        public string UsuarioId { get; set; }
     }
 
     public enum TipoEnsaio

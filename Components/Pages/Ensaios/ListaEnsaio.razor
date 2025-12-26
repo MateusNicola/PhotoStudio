@@ -1,6 +1,6 @@
 ﻿@page "/ensaios"
+@using Microsoft.AspNetCore.Authorization
 @using PhotoStudio.app.Components.Shared
-@using PhotoStudio.app.Data
 @using PhotoStudio.app.Models
 @using PhotoStudio.app.Services
 @using PhotoStudio.app.Services.Ensaios
@@ -8,34 +8,28 @@
 @inject EnsaioService EnsaioService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@attribute [Authorize]
 
 <PageTitle>Ensaios - Estúdio de Fotografia</PageTitle>
 
 <div class="page-container">
     <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Ensaio" Message="Tem certeza que deseja excluir este ensaio?" />
 
-    <div class="page-header">
+    <header class="page-header">
         <h1>Ensaios</h1>
         <p class="subtitle">Gerencie seus ensaios fotográficos</p>
-    </div>
+    </header>
 
-    <div class="actions-bar">
+    <section class="actions-bar">
         <div class="filters-group">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
-                <input type="text"
-                       class="form-control"
-                       placeholder="Título ou cliente..."
-                       @bind-value="filtroBusca"
-                       @bind-value:event="oninput"
-                       @onkeyup="AplicarFiltro" />
+                <input type="text" class="form-control" placeholder="Título ou cliente..."
+                       @bind-value="filtroBusca" @bind-value:event="oninput" @onkeyup="AplicarFiltro" />
             </div>
 
             <div class="filter-item">
-                <input type="date"
-                       class="form-control"
-                       @bind="filtroData"
-                       @bind:after="AplicarFiltro" />
+                <input type="date" class="form-control" @bind="filtroData" @bind:after="AplicarFiltro" />
             </div>
 
             <div class="filter-item">
@@ -55,26 +49,14 @@
         </div>
 
         <button class="btn btn-primary" @onclick="IrParaCriarEnsaio">
-            <span>📸</span>
-            <span>Novo Ensaio</span>
+            <span>📸 Novo Ensaio</span>
         </button>
-    </div>
+    </section>
 
     <div class="table-container">
         @if (carregando)
         {
-            <div class="loading-container">
-                <div class="loading-spinner"></div>
-                <p>Carregando ensaios...</p>
-            </div>
-        }
-        else if (ensaiosFiltrados.Count == 0)
-        {
-            <div class="empty-message">
-                <div class="empty-icon">📷</div>
-                <h3>Nenhum ensaio encontrado</h3>
-                <p>@(TemFiltroAtivo ? "Tente ajustar os filtros de busca." : "Comece criando seu primeiro ensaio.")</p>
-            </div>
+            <div class="loading-container"><div class="loading-spinner"></div><p>Carregando...</p></div>
         }
         else
         {
@@ -83,49 +65,30 @@
                     <thead>
                         <tr>
                             <th style="width: 35%;">Informações do Ensaio</th>
-                            <th style="width: 20%;">Data e Hora</th>
-                            <th style="width: 20%;">Local</th>
-                            <th style="width: 12%;">Financeiro</th>
+                            <th style="width: 25%;">Data e Hora</th>
+                            <th style="width: 25%;">Local</th>
+                            <th style="width: 15%;">Financeiro</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var e in ensaiosFiltrados)
+                        @foreach (var e in ensaiosPaginados)
                         {
-                            <tr @onclick="() => Editar(e.Id)" style="cursor: pointer;">
+                            <tr @onclick="() => Editar(e.Id)">
                                 <td>
                                     <div class="info-cell">
-                                        <div class="titulo-row">
-                                            <span class="titulo-principal" title="@e.Titulo">@e.Titulo</span>
-                                            <span class="tipo-badge" style="background: @ObterCorTipo(e.Tipo)">
-                                                @e.Tipo.ToString()
-                                            </span>
-                                        </div>
-                                        <div class="cliente-row">
-                                            <span class="label-icon">👤</span>
-                                            <span class="cliente-nome" title="@e.Cliente.Nome">@e.Cliente.Nome</span>
+                                        <span class="titulo-principal">@e.Titulo</span>
+                                        <div class="sub-info">
+                                            <span class="tipo-badge" style="background: @ObterCorTipo(e.Tipo)">@e.Tipo</span>
+                                            <span class="cliente-nome">👤 @e.Cliente.Nome</span>
                                         </div>
                                     </div>
                                 </td>
-                                <td>
-                                    <div class="data-info">
-                                        <span class="data">📅 @e.Data.ToString("dd/MM/yyyy")</span>
-                                        <span class="hora">🕐 @e.Data.ToString("HH:mm")</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="local-info">
-                                        <span class="local-icon">📍</span>
-                                        <span class="local-texto" title="@e.Local">@e.Local</span>
-                                    </div>
-                                </td>
+                                <td>📅 @e.Data.ToString("dd/MM/yyyy") às @e.Data.ToString("HH:mm")</td>
+                                <td>📍 @e.Local</td>
                                 <td>
                                     <div class="financeiro-cell">
-                                        <span class="valor-texto">
-                                            @(e.Valor.HasValue? e.Valor.Value.ToString("C") : "-")
-                                        </span>
-                                        <span class="situacao-badge" style="background: @ObterCorSituacao(e.Situacao)">
-                                            @e.Situacao.ToString()
-                                        </span>
+                                        <strong>@(e.Valor?.ToString("C") ?? "-")</strong>
+                                        <span class="situacao-badge" style="background: @ObterCorSituacao(e.Situacao)">@e.Situacao</span>
                                     </div>
                                 </td>
                             </tr>
@@ -134,140 +97,127 @@
                 </table>
             </div>
 
-            <div class="table-footer">
-                <span>Total: @ensaiosFiltrados.Count ensaio(s)</span>
-            </div>
+            <footer class="pagination-container">
+                <div class="pagination-info">Mostrando @ensaiosPaginados.Count() de @ensaiosFiltrados.Count ensaios</div>
+                <div class="pagination-controls">
+                    <button class="btn-pager" disabled="@(paginaAtual == 1)" @onclick="() => MudarPagina(paginaAtual - 1)">
+                        <span class="pager-icon">❮</span>
+                        <span class="pager-text">Anterior</span>
+                    </button>
+
+                    <div class="pager-numbers">
+                        @for (int i = 1; i <= totalPaginas; i++)
+                        {
+                            var p = i;
+                            <button class="btn-number @(p == paginaAtual ? "active" : "")" @onclick="() => MudarPagina(p)">
+                                @p
+                            </button>
+                        }
+                    </div>
+
+                    <button class="btn-pager" disabled="@(paginaAtual >= totalPaginas)" @onclick="() => MudarPagina(paginaAtual + 1)">
+                        <span class="pager-text">Próximo</span>
+                        <span class="pager-icon">❯</span>
+                    </button>
+                </div>
+            </footer>
         }
     </div>
 </div>
 
 <style>
+  
     .page-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+        overflow: hidden;
+        background-color: #f8fafc;
+        box-sizing: border-box;
     }
 
     .page-header {
-        margin-bottom: 32px;
+        margin-bottom: 20px;
+        flex-shrink: 0;
     }
 
         .page-header h1 {
-            font-size: 2.5rem;
-            color: #2d3748;
-            margin: 0 0 8px 0;
+            font-size: 2.2rem;
+            margin: 0;
+            color: #1a202c;
         }
 
     .subtitle {
         color: #718096;
-        font-size: 1.1rem;
-        margin: 0;
+        margin: 5px 0 0;
     }
+
 
     .actions-bar {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-        gap: 16px;
-        flex-wrap: wrap;
-    }
-
-    .actions-cell {
-        text-align: center;
-        vertical-align: middle !important;
+        align-items: flex-end; 
+        margin-bottom: 20px;
+        flex-shrink: 0;
     }
 
     .filters-group {
         display: flex;
         gap: 12px;
-        flex: 1;
         align-items: center;
-        min-width: 300px;
     }
 
     .search-box {
-        flex: 1;
         position: relative;
-        min-width: 200px;
     }
 
     .search-icon {
         position: absolute;
-        left: 14px;
+        left: 12px;
         top: 50%;
         transform: translateY(-50%);
         color: #a0aec0;
+        z-index: 1;
     }
 
     .form-control {
-        padding: 10px 16px;
-        border: 2px solid #e2e8f0;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        width: 100%;
+        background: white;
         font-size: 0.95rem;
-        transition: all 0.2s;
     }
 
     .search-box .form-control {
-        padding-left: 40px;
-    }
-
-    .form-control:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
-    }
-
-    .btn-clear {
-        background: #edf2f7;
-        border: none;
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-        .btn-clear:hover {
-            background: #e2e8f0;
-            color: #e53e3e;
-        }
-
-    .btn {
-        padding: 12px 24px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        border: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
+        padding-left: 35px;
+        min-width: 250px;
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #6366f1;
         color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
     }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
-        }
-
     .table-container {
+        flex: 1; 
         background: white;
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
 
     .table-scroll {
+        flex: 1;
+        overflow-y: auto;
         overflow-x: auto;
     }
 
@@ -276,131 +226,135 @@
         border-collapse: collapse;
     }
 
-    .styled-table th {
-        text-align: left;
-        background: #f7fafc;
-        padding: 16px 12px;
-        color: #4a5568;
-        border-bottom: 2px solid #e2e8f0;
+        .styled-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            padding: 16px;
+            text-align: left;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .styled-table tbody td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+        }
+
+        .styled-table tr:hover {
+            background: #f8fafc;
+        }
+
+
+    .pagination-container {
+        padding: 16px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
     }
 
-    .styled-table td {
-        padding: 14px 12px;
-        border-bottom: 1px solid #edf2f7;
-        color: #2d3748;
-    }
-
-    .styled-table tr:hover {
-        background: #f8fafc;
-    }
 
     .info-cell {
         display: flex;
         flex-direction: column;
+        gap: 6px;
+    }
+
+    .sub-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .tipo-badge, .situacao-badge {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        color: white;
+        font-weight: 600;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .btn-pager {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background-color: white;
+        color: #4a5568;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .btn-pager:hover:not(:disabled) {
+            background-color: #f7fafc;
+            border-color: #cbd5e0;
+            color: #2d3748;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .btn-pager:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #f1f5f9;
+        }
+
+    .pager-numbers {
+        display: flex;
         gap: 4px;
     }
 
-    .titulo-principal {
-        font-weight: 600;
-        color: #2d3748;
-    }
-
-    .tipo-badge {
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-size: 0.7rem;
-        color: white;
-        font-weight: 700;
-    }
-
-    .situacao-badge {
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-size: 0.7rem;
-        color: white;
-        font-weight: 700;
-    }
-
-    .icon-btn.delete {
-        border: none;
-        background: none;
-        font-size: 1.1rem;
-        cursor: pointer;
-        color: #a0aec0;
-        display: inline-flex;
+    .btn-number {
+        width: 36px;
+        height: 36px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
-        padding: 0; 
-        border-radius: 50%;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #64748b;
+        font-weight: 600;
+        cursor: pointer;
         transition: all 0.2s;
-        line-height: 1; 
-        transition: all 0.2s;
     }
 
-    .icon-btn.delete:hover {
-        background: #fff5f5;
-        color: #e53e3e;
-    }
-
-    .loading-container, .empty-message {
-        padding: 60px;
-        text-align: center;
-        color: #718096;
-    }
-
-    .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #667eea;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 15px;
-    }
-
-    @@keyframes spin {
-        0% {
-            transform: rotate(0deg);
+        .btn-number:hover:not(.active) {
+            background-color: #edf2f7;
+            color: #2d3748;
         }
 
-        100% {
-            transform: rotate(360deg);
+        .btn-number.active {
+            background-color: #6366f1; 
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
         }
+
+    @@media (max-width: 600px) {
+        .pager-text
+
+    {
+        display: none;
     }
 
-    .table-footer {
-        padding: 15px;
-        background: #f7fafc;
-        text-align: right;
-        color: #718096;
-        font-size: 0.9rem;
+    .btn-pager {
+        padding: 8px 12px;
     }
 
-    .search-box .form-control {
-        padding-left: 40px;
-        cursor: text;
-    }
-
-    input[type="date"].form-control,
-    select.form-control {
-        cursor: pointer;
-    }
-
-    .btn-clear,
-    .btn,
-    .icon-btn {
-        cursor: pointer;
-    }
-
-    select.form-control {
-        appearance: none;
-        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-        background-repeat: no-repeat;
-        background-position: right 1rem center;
-        background-size: 1em;
-        padding-right: 2.5rem;
     }
 </style>
 
@@ -408,20 +362,18 @@
     private List<EnsaioModel> ensaios = new();
     private List<EnsaioModel> ensaiosFiltrados = new();
     private bool carregando = true;
-
-    // Filtros
     private string filtroBusca = "";
     private DateTime? filtroData;
     private TipoEnsaio? filtroTipo;
+    private int paginaAtual = 1;
+    private int itensPorPagina = 4;
 
     private JanelaConfirmacao? janelaConfirmacao;
-
     private bool TemFiltroAtivo => !string.IsNullOrWhiteSpace(filtroBusca) || filtroData.HasValue || filtroTipo.HasValue;
+    private int totalPaginas => (int)Math.Ceiling((double)ensaiosFiltrados.Count / itensPorPagina);
+    private IEnumerable<EnsaioModel> ensaiosPaginados => ensaiosFiltrados.Skip((paginaAtual - 1) * itensPorPagina).Take(itensPorPagina);
 
-    protected override async Task OnInitializedAsync()
-    {
-        await CarregarEnsaios();
-    }
+    protected override async Task OnInitializedAsync() => await CarregarEnsaios();
 
     private async Task CarregarEnsaios()
     {
@@ -431,91 +383,43 @@
             ensaios = await EnsaioService.ListarTodosAsync();
             AplicarFiltro();
         }
-        catch (Exception ex)
+        finally { carregando = false; }
+    }
+
+    private void MudarPagina(int novaPagina)
+    {
+        if (novaPagina >= 1 && novaPagina <= totalPaginas)
         {
-            ToastService.Error($"Erro ao carregar ensaios: {ex.Message}");
-        }
-        finally
-        {
-            carregando = false;
+            paginaAtual = novaPagina;
         }
     }
 
     private void AplicarFiltro()
     {
-        var query = ensaios.AsQueryable();
-
-        // 1. Filtro por texto (Título ou Nome do Cliente)
-        if (!string.IsNullOrWhiteSpace(filtroBusca))
-        {
-            query = query.Where(e =>
-                (e.Titulo != null && e.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase)) ||
-                (e.Cliente != null && e.Cliente.Nome != null && e.Cliente.Nome.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase))
-            );
-        }
-
-        // 2. Filtro por Data
-        if (filtroData.HasValue)
-        {
-            query = query.Where(e => e.Data.Date == filtroData.Value.Date);
-        }
-
-        // 3. Filtro por Tipo
-        if (filtroTipo.HasValue)
-        {
-            query = query.Where(e => e.Tipo == filtroTipo.Value);
-        }
-
-        // Ordenação por data (mais recente primeiro)
-        ensaiosFiltrados = query.OrderByDescending(e => e.Data).ToList();
+        paginaAtual = 1;
+        ensaiosFiltrados = ensaios
+            .Where(e => (string.IsNullOrEmpty(filtroBusca) || e.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) || e.Cliente.Nome.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase))
+                     && (!filtroData.HasValue || e.Data.Date == filtroData.Value.Date)
+                     && (!filtroTipo.HasValue || e.Tipo == filtroTipo.Value))
+            .OrderByDescending(e => e.Data).ToList();
     }
 
-    private void LimparFiltros()
-    {
-        filtroBusca = string.Empty;
-        filtroData = null;
-        filtroTipo = null;
-        AplicarFiltro();
-    }
-
-    private async Task Excluir(int id)
-    {
-        if (janelaConfirmacao == null) return;
-
-        bool confirmado = await janelaConfirmacao.Show();
-        if (!confirmado) return;
-
-        try
-        {
-            await EnsaioService.ExcluirAsync(id);
-            await CarregarEnsaios();
-            ToastService.Success("Ensaio excluído com sucesso!");
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Erro ao excluir ensaio: {ex.Message}");
-        }
-    }
-
+    private void LimparFiltros() { filtroBusca = ""; filtroData = null; filtroTipo = null; AplicarFiltro(); }
     private void Editar(int id) => Navigation.NavigateTo($"/ensaios/editarEnsaio/{id}");
     private void IrParaCriarEnsaio() => Navigation.NavigateTo("/ensaios/criarEnsaio");
 
-    private string ObterCorTipo(TipoEnsaio tipo) => tipo switch
+    private string ObterCorTipo(TipoEnsaio t) => t switch
     {
-        TipoEnsaio.Casamento => "#f093fb",
-        TipoEnsaio.Gestante => "#fa709a",
-        TipoEnsaio.Infantil => "#4facfe",
-        TipoEnsaio.Evento => "#43e97b",
-        TipoEnsaio.Retrato => "#667eea",
-        _ => "#a0aec0"
+        TipoEnsaio.Casamento => "#8b5cf6",
+        TipoEnsaio.Gestante => "#ec4899",
+        TipoEnsaio.Infantil => "#3b82f6",
+        _ => "#64748b"
     };
-
-    private string ObterCorSituacao(Situacao situacao) => situacao switch
+    private string ObterCorSituacao(Situacao s) => s switch
     {
-        Situacao.Cancelado => "#e53e3e",
-        Situacao.Concluido => "#38a169",
-        Situacao.Agendado => "#3182ce",
-        Situacao.Confirmado => "#d69e2e",
-        _ => "#a0aec0"
+        Situacao.Concluido => "#10b981",
+        Situacao.Cancelado => "#ef4444",
+        Situacao.Agendado => "#f59e0b",
+        _ => "#64748b"
     };
 }
