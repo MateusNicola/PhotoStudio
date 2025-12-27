@@ -507,11 +507,10 @@
     {
         try
         {
-            // Carrega dados em paralelo para maior rapidez
             var tarefas = new Task[] {
                 CarregarClientes(),
                 CarregarEnsaio()
-            };
+        };
             await Task.WhenAll(tarefas);
         }
         finally
@@ -543,7 +542,6 @@
         salvando = true;
         try
         {
-            // Sincroniza Data e Hora
             if (TimeSpan.TryParse(horaEnsaio, out var hora))
             {
                 ensaio.Data = dataEnsaio.Date.Add(hora);
@@ -551,9 +549,8 @@
 
             await EnsaioService.AtualizarAsync(ensaio);
             ToastService.Success("Ensaio atualizado com sucesso!");
-
-            await Task.Delay(500);
-            Navigation.NavigateTo("/ensaios");
+            await Task.Delay(1000);
+            Voltar();
         }
         catch (Exception ex)
         {
@@ -577,9 +574,8 @@
         {
             await EnsaioService.ExcluirAsync(ensaio.Id);
             ToastService.Success("Ensaio excluído com sucesso!");
-
-            await Task.Delay(500);
-            Navigation.NavigateTo("/ensaios");
+            await Task.Delay(1000);
+            Voltar();
         }
         catch (Exception ex)
         {

@@ -20,7 +20,7 @@ public class Program
 
         builder.Services.AddScoped<ClienteService>();
         builder.Services.AddScoped<EnsaioService>();
-        builder.Services.AddScoped<ToastService>();
+        builder.Services.AddSingleton<ToastService>();
         builder.Services.AddScoped<DashboardService>();
 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");

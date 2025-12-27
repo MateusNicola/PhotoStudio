@@ -1,57 +1,161 @@
-﻿@using PhotoStudio.app.Services
+﻿@rendermode InteractiveServer
+@using PhotoStudio.app.Services
 @implements IDisposable
 @inject ToastService ToastService
 
-<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1100;">
-    @if (mostrar)
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 99999;">
+     @foreach (var toast in toasts)
     {
-        <div class="toast show @CssClasse" role="alert">
+        <div class="toast show @toast.CssClasse mb-2" role="alert" @key="toast.Id" style="display: block !important; opacity: 1 !important;">
             <div class="toast-body d-flex justify-content-between align-items-center">
-                <span>@mensagem</span>
-                <button type="button" class="btn-close ms-2" @onclick="Fechar"></button>
+                <span><strong> @toast.Mensagem</strong></span>
+                <button type="button" class="btn-close ms-2" @onclick="() => FecharToast(toast.Id)"></button>
             </div>
         </div>
     }
 </div>
 
+<style>
+    .toast-container {
+        max-width: 450px;
+        pointer-events: auto;
+    }
+
+    .toast {
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+        border: 3px solid #000 !important;
+        pointer-events: auto;
+    }
+
+    .toast-body {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+
+    .text-bg-success {
+        background-color: #10b981 !important;
+        color: white !important;
+    }
+
+    .text-bg-danger {
+        background-color: #ef4444 !important;
+        color: white !important;
+    }
+
+    .text-bg-warning {
+        background-color: #f59e0b !important;
+        color: white !important;
+    }
+
+    .text-bg-info {
+        background-color: #3b82f6 !important;
+        color: white !important;
+    }
+
+    .btn-close {
+        filter: brightness(0) invert(1);
+    }
+</style>
+
 @code {
-    private bool mostrar;
-    private string mensagem = string.Empty;
-    private string CssClasse = string.Empty;
+    private List<ToastModel> toasts = new();
+    private bool componenteInicializado = false;
 
     protected override void OnInitialized()
     {
-        ToastService.OnShow += Mostrar;
+        Console.WriteLine("========================================");
+        Console.WriteLine("🚀 Toast Component OnInitialized CHAMADO");
+        Console.WriteLine($"🔍 ToastService é null? {ToastService == null}");
+
+        if (ToastService != null)
+        {
+            ToastService.OnShow += Mostrar;
+            Console.WriteLine("✅ Event handler registrado com sucesso!");
+        }
+        else
+        {
+            Console.WriteLine("❌ ToastService está NULL!");
+        }
+
+        componenteInicializado = true;
+        Console.WriteLine("========================================");
     }
 
-    private void Mostrar(string msg, ToastType tipo)
+    protected override void OnAfterRender(bool firstRender)
     {
-        mensagem = msg;
-        CssClasse = tipo switch
+        if (firstRender)
         {
-            ToastType.Success => "text-bg-success",
-            ToastType.Error => "text-bg-danger",
-            ToastType.Warning => "text-bg-warning",
-            _ => "text-bg-info"
+            Console.WriteLine("🎨 Toast Component renderizado pela primeira vez");
+        }
+    }
+
+    private async void Mostrar(string msg, ToastType tipo)
+    {
+        Console.WriteLine("========================================");
+        Console.WriteLine($"📢 TOAST RECEBIDO!");
+        Console.WriteLine($"   Mensagem: {msg}");
+        Console.WriteLine($"   Tipo: {tipo}");
+        Console.WriteLine($"   Thread ID: {System.Threading.Thread.CurrentThread.ManagedThreadId}");
+        Console.WriteLine("========================================");
+
+        var toast = new ToastModel
+        {
+            Id = Guid.NewGuid(),
+            Mensagem = msg,
+            Tipo = tipo.ToString(),
+            CssClasse = tipo switch
+            {
+                ToastType.Success => "text-bg-success",
+                ToastType.Error => "text-bg-danger",
+                ToastType.Warning => "text-bg-warning",
+                _ => "text-bg-info"
+            }
         };
 
-        mostrar = true;
-        StateHasChanged();
+        toasts.Add(toast);
+        Console.WriteLine($"✅ Toast adicionado à lista. Total: {toasts.Count}");
 
-        _ = Task.Delay(3000).ContinueWith(_ =>
+        try
         {
-            mostrar = false;
-            InvokeAsync(StateHasChanged);
-        });
+            await InvokeAsync(StateHasChanged);
+            Console.WriteLine("✅ StateHasChanged chamado com sucesso");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erro no StateHasChanged: {ex.Message}");
+        }
+
+        // Remove automaticamente após 5 segundos
+        _ = Task.Delay(5000).ContinueWith(_ => FecharToast(toast.Id));
     }
 
-    private void Fechar()
+    private async void FecharToast(Guid id)
     {
-        mostrar = false;
+        Console.WriteLine($"🗑️ Removendo toast ID: {id}");
+        var toast = toasts.FirstOrDefault(t => t.Id == id);
+        if (toast != null)
+        {
+            toasts.Remove(toast);
+            await InvokeAsync(StateHasChanged);
+            Console.WriteLine($"✅ Toast removido. Total restante: {toasts.Count}");
+        }
     }
 
     public void Dispose()
     {
-        ToastService.OnShow -= Mostrar;
+        Console.WriteLine("❌ Toast Component sendo destruído (Dispose)");
+        if (ToastService != null)
+        {
+            ToastService.OnShow -= Mostrar;
+        }
+    }
+
+    private class ToastModel
+    {
+        public Guid Id { get; set; }
+        public string Mensagem { get; set; } = "";
+        public string Tipo { get; set; } = "";
+        public string CssClasse { get; set; } = "";
     }
 }

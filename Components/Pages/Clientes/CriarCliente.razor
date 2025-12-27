@@ -413,7 +413,8 @@
         {
             await ClienteService.CriarAsync(novoCliente);
             ToastService.Success("Cliente criado com sucesso!");
-            await Task.Delay(700);
+            await Task.Delay(1000);
+            Voltar();
         }
         catch (Exception ex)
         {
@@ -430,7 +431,8 @@
             {
                 await ClienteService.ExcluirAsync(novoCliente.Id);
                 ToastService.Success("Cliente excluído!");
-                Navigation.NavigateTo("/clientes");
+                await Task.Delay(1000);
+                Voltar();
             }
             catch (Exception ex)
             {

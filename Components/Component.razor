@@ -1,0 +1,164 @@
+﻿@using PhotoStudio.app.Services
+@inject ToastService ToastService
+@implements IDisposable
+
+<div class="toast-container">
+    @foreach (var toast in toasts)
+    {
+        <div class="toast toast-@toast.Type.ToString().ToLower() @(toast.IsVisible ? "show" : "")" @key="toast.Id">
+            <div class="toast-icon">
+                @if (toast.Type == ToastType.Success)
+                {
+                    <span>✓</span>
+                }
+                else if (toast.Type == ToastType.Error)
+                {
+                    <span>✕</span>
+                }
+                else if (toast.Type == ToastType.Warning)
+                {
+                    <span>⚠</span>
+                }
+                else
+                {
+                    <span>ℹ</span>
+                }
+            </div>
+            <div class="toast-message">@toast.Message</div>
+            <button class="toast-close" @onclick="() => RemoveToast(toast.Id)">×</button>
+        </div>
+    }
+</div>
+
+<style>
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 99999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+    }
+
+    .toast {
+        min-width: 300px;
+        max-width: 500px;
+        padding: 16px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        opacity: 0;
+        transform: translateX(400px);
+        transition: all 0.3s ease;
+        pointer-events: auto;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+    .toast-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .toast-error {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .toast-warning {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+
+    .toast-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+    }
+
+    .toast-icon {
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    .toast-message {
+        flex: 1;
+        font-size: 14px;
+    }
+
+    .toast-close {
+        background: transparent;
+        border: none;
+        color: inherit;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        opacity: 0.7;
+    }
+
+        .toast-close:hover {
+            opacity: 1;
+        }
+</style>
+
+@code {
+    private List<ToastModel> toasts = new();
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += ShowToast;
+    }
+
+    private async void ShowToast(string message, ToastType type)
+    {
+        var toast = new ToastModel
+        {
+            Id = Guid.NewGuid(),
+            Message = message,
+            Type = type,
+            IsVisible = false
+        };
+
+        toasts.Add(toast);
+        await InvokeAsync(StateHasChanged);
+
+        await Task.Delay(10);
+        toast.IsVisible = true;
+        await InvokeAsync(StateHasChanged);
+
+        _ = Task.Delay(4000).ContinueWith(_ => RemoveToast(toast.Id));
+    }
+
+    private async void RemoveToast(Guid id)
+    {
+        var toast = toasts.FirstOrDefault(t => t.Id == id);
+        if (toast != null)
+        {
+            toast.IsVisible = false;
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(300);
+            toasts.Remove(toast);
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= ShowToast;
+    }
+
+    private class ToastModel
+    {
+        public Guid Id { get; set; }
+        public string Message { get; set; } = "";
+        public ToastType Type { get; set; }
+        public bool IsVisible { get; set; }
+    }
+}

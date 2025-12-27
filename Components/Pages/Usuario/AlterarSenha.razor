@@ -21,13 +21,6 @@
                 <h1>Segurança</h1>
                 <p class="subtitle">Mantenha sua conta protegida atualizando sua senha periodicamente</p>
             </div>
-            
-            <div class="actions-right">
-                <button type="button" class="btn btn-primary" @onclick="HandleSubmit" disabled="@isProcessing">
-                    @if (isProcessing) { <span class="spinner"></span> }
-                    <span>Atualizar Senha</span>
-                </button>
-            </div>
         </div>
     </div>
 
@@ -48,18 +41,26 @@
                     <ValidationMessage For="@(() => model.NovaSenha)" class="validation-message" />
                 </div>
 
-                <div class="actions-right" style="margin-top: 20px; justify-content: flex-end;">
-                    <button type="submit" class="btn btn-primary" disabled="@isProcessing">
-                        @if (isProcessing)
-                        {
-                            <span class="spinner"></span>
-                            <span>Processando...</span>
-                        }
-                        else
-                        {
-                            <span>💾 Atualizar Senha</span>
-                        }
-                    </button>
+                <div class="form-group">
+                    <label>Confirmar Nova Senha</label>
+                    <InputText type="password" class="form-control" @bind-Value="model.ConfirmarSenha" placeholder="Digite a senha novamente" />
+                    <ValidationMessage For="@(() => model.ConfirmarSenha)" class="validation-message" />
+                </div>
+
+                <div class="form-group full-width" style="margin-top: 20px;">
+                    <div class="actions-right">
+                        <button type="submit" class="btn btn-primary" disabled="@isProcessing">
+                            @if (isProcessing)
+                            {
+                                <span class="spinner"></span>
+                                <span>Processando...</span>
+                            }
+                            else
+                            {
+                                <span>💾 Atualizar Senha</span>
+                            }
+                        </button>
+                    </div>
                 </div>
             </div>
         </EditForm>
@@ -127,6 +128,7 @@
         display: flex;
         gap: 12px;
         align-items: center;
+        justify-content: flex-end;
     }
 
     .form-container {
@@ -202,6 +204,11 @@
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
     .spinner {
         width: 16px;
         height: 16px;
@@ -209,21 +216,6 @@
         border-top-color: white;
         border-radius: 50%;
         animation: spin 0.6s linear infinite;
-    }
-
-    .loading-container {
-        text-align: center;
-        padding: 40px;
-    }
-
-    .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #667eea;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 15px;
     }
 
     @@keyframes spin {
@@ -248,7 +240,6 @@
 
         .actions-right {
             width: 100%;
-            margin-top: 15px;
         }
 
             .actions-right .btn {
@@ -266,7 +257,6 @@
         if (isProcessing) return;
 
         isProcessing = true;
-        StateHasChanged(); // Força o Blazor a mostrar o spinner imediatamente
 
         try
         {
@@ -284,6 +274,8 @@
             if (resultado.Sucesso)
             {
                 ToastService.Success(resultado.Mensagem);
+                model = new();
+                await Task.Delay(1000);
                 Navigation.NavigateTo("/");
             }
             else
@@ -298,7 +290,6 @@
         finally
         {
             isProcessing = false;
-            StateHasChanged();
         }
     }
 
@@ -308,9 +299,10 @@
         public string SenhaAtual { get; set; } = "";
 
         [Required(ErrorMessage = "A nova senha é obrigatória")]
-        [MinLength(6, ErrorMessage = "A nova senha deve ter no menos 6 caracteres")]
+        [MinLength(6, ErrorMessage = "A nova senha deve ter no mínimo 6 caracteres")]
         public string NovaSenha { get; set; } = "";
 
+        [Required(ErrorMessage = "Confirme a nova senha")]
         [Compare("NovaSenha", ErrorMessage = "As senhas não conferem")]
         public string ConfirmarSenha { get; set; } = "";
     }

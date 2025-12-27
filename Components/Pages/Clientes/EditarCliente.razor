@@ -468,8 +468,8 @@
         {
             await ClienteService.AtualizarAsync(cliente);
             ToastService.Success("Alterações salvas com sucesso!");
-            await Task.Delay(500);
-            Navigation.NavigateTo("/clientes");
+            await Task.Delay(1000);
+            Voltar();
         }
         catch (Exception ex)
         {
@@ -486,7 +486,8 @@
             {
                 await ClienteService.ExcluirAsync(Id);
                 ToastService.Success("Cliente removido com sucesso!");
-                Navigation.NavigateTo("/clientes");
+                await Task.Delay(1000);
+                Voltar();
             }
             catch (Exception ex)
             {

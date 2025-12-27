@@ -97,16 +97,31 @@ public class AuthService
         return true;
     }
 
-    public async Task<(bool Sucesso, string Mensagem)> AlterarSenhaPropriaAsync(string login, string senhaAtual, string novaSenha)
+    public async Task<(bool Sucesso, string Mensagem)> AlterarSenhaPropriaAsync(string login, string? senhaAtual, string novaSenha)
     {
         var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Identificacao == login);
-        if (usuario == null) return (false, "Usuário não encontrado.");
 
-        // Verifica se a senha atual está correta
-        bool senhaValida = BCrypt.Net.BCrypt.Verify(senhaAtual, usuario.Senha);
-        if (!senhaValida) return (false, "A senha atual está incorreta.");
+        if (usuario == null)
+        {
+            return (false, "Usuário não encontrado.");
+        }
 
-        // Atualiza para a nova senha
+        senhaAtual = senhaAtual?.Trim();
+
+        try
+        {
+            bool senhaValida = BCrypt.Net.BCrypt.EnhancedVerify(senhaAtual, usuario.Senha);
+
+            if (!senhaValida)
+            {
+                return (false, "A senha atual está incorreta.");
+            }
+        }
+        catch (Exception)
+        {
+            return (false, "Erro ao verificar senha. Formato inválido.");
+        }
+
         usuario.Senha = BCrypt.Net.BCrypt.HashPassword(novaSenha);
         await _context.SaveChangesAsync();
 

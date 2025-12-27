@@ -20,7 +20,7 @@
 <div class="page-container">
     <div class="page-header">
         <div class="header-content">
-            <button class="btn-back" @onclick="Cancelar" title="Voltar">
+            <button class="btn-back" @onclick="Voltar" title="Voltar">
                 <span>←</span>
             </button>
             <div class="header-text">
@@ -497,7 +497,7 @@
                 idEnsaioCriado = 1;
                 ToastService.Success("Ensaio criado com sucesso!");
                 await Task.Delay(1000);
-                Navigation.NavigateTo("/ensaios");
+                Voltar();
             }
             else
             {
@@ -517,12 +517,11 @@
         if (janelaConfirmacao == null) return;
         if (await janelaConfirmacao.Show())
         {
-            // Nota: Esta exclusão só funcionará se você tiver o ID real.
-            // Se o CriarAsync for void, o objeto 'novoEnsaio' pode não ter o ID preenchido pelo banco ainda.
             await EnsaioService.ExcluirAsync(novoEnsaio.Id);
-            Navigation.NavigateTo("/ensaios");
+            await Task.Delay(1000);
+            Voltar();
         }
     }
 
-    private void Cancelar() => Navigation.NavigateTo("/ensaios");
+    private void Voltar() => Navigation.NavigateTo("/ensaios");
 }

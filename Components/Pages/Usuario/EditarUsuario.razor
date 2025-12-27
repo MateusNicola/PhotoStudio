@@ -286,14 +286,13 @@
         userModel = await AuthService.ObterPorIdAsync(Id);
         if (userModel != null)
         {
-            editModel.Nome = userModel.Nome;
-            // Verifique se no seu modelo é .Login ou .Identificacao
+            editModel.Nome = userModel.Nome;            
             editModel.Identificacao = userModel.Identificacao;
         }
         else
         {
             ToastService.Error("Usuário não encontrado.");
-            Navigation.NavigateTo("/usuarios");
+            Voltar();
         }
     }
 
@@ -312,7 +311,8 @@
             if (sucesso)
             {
                 ToastService.Success("Usuário atualizado com sucesso!");
-                Navigation.NavigateTo("/usuarios");
+                await Task.Delay(1000);
+                Voltar();
             }
             else
             {
