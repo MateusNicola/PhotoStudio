@@ -9,11 +9,11 @@
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 @inject ClienteService ClienteService
+@inject IHttpClientFactory ClientFactory
 @attribute [Authorize]
 
 <PageTitle>Cliente - Estúdio de Fotografia</PageTitle>
 
-@* Componente de confirmação (necessário referenciar o seu componente JanelaConfirmacao) *@
 <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Cliente" Message="Tem certeza que deseja excluir este cliente?" />
 
 <div class="page-container">
@@ -23,10 +23,9 @@
                 <span>←</span>
             </button>
             <div class="header-text">
-                <h1>@(novoCliente.Id > 0 ? "Cliente" : "Cliente")</h1>
+                <h1>@(novoCliente.Id > 0 ? "Editar Cliente" : "Novo Cliente")</h1>
             </div>
 
-            @* Botões movidos para o topo *@
             <div class="actions-right">
                 <button type="button" class="btn btn-primary" @onclick="SalvarCliente" disabled="@salvando">
                     @if (salvando)
@@ -51,33 +50,119 @@
     </div>
 
     <div class="form-container">
+        @* --- NAVEGAÇÃO DE ABAS --- *@
+        <div class="tabs-container">
+            <button type="button" class="tab-btn @(activeTab == 1 ? "active" : "")" @onclick="() => activeTab = 1">
+                👤 Dados Gerais
+            </button>
+            <button type="button" class="tab-btn @(activeTab == 2 ? "active" : "")" @onclick="() => activeTab = 2">
+                📍 Endereço
+            </button>
+        </div>
+
         <EditForm Model="@novoCliente" OnValidSubmit="SalvarCliente">
             <DataAnnotationsValidator />
 
-            <div class="form-grid">
-                <div class="form-group full-width">
-                    <label for="nome">Nome Completo *</label>
-                    <InputText id="nome" class="form-control" @bind-Value="novoCliente.Nome" placeholder="Ex: João da Silva" />
-                    <ValidationMessage For="@(() => novoCliente.Nome)" />
-                </div>
+            @* --- ABA 1: DADOS GERAIS --- *@
+            <div class="tab-content @(activeTab == 1 ? "show" : "hide")">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="nome">Nome Completo *</label>
+                        <InputText id="nome" class="form-control" @bind-Value="novoCliente.Nome" placeholder="Ex: João da Silva" />
+                        <ValidationMessage For="@(() => novoCliente.Nome)" />
+                    </div>
 
-                <div class="form-group">
-                    <label for="telefone">Telefone *</label>
-                    <InputText id="telefone" class="form-control" @bind-Value="novoCliente.Telefone"
-                               @oninput="AplicarMascaraTelefone" maxlength="15" placeholder="(00) 00000-0000" />
-                    <ValidationMessage For="@(() => novoCliente.Telefone)" />
-                </div>
+                    <div class="form-group">
+                        <label for="telefone">Telefone *</label>
+                        <InputText id="telefone" class="form-control" @bind-Value="novoCliente.Telefone"
+                                   @oninput="AplicarMascaraTelefone" maxlength="15" placeholder="(00) 00000-0000" />
+                        <ValidationMessage For="@(() => novoCliente.Telefone)" />
+                    </div>
 
-                <div class="form-group">
-                    <label for="email">E-mail *</label>
-                    <InputText id="email" type="email" class="form-control" @bind-Value="novoCliente.Email" placeholder="exemplo@email.com" />
-                    <ValidationMessage For="@(() => novoCliente.Email)" />
+                    <div class="form-group">
+                        <label for="email">E-mail *</label>
+                        <InputText id="email" type="email" class="form-control" @bind-Value="novoCliente.Email" placeholder="exemplo@email.com" />
+                        <ValidationMessage For="@(() => novoCliente.Email)" />
+                    </div>
                 </div>
+            </div>
 
-                <div class="form-group full-width">
-                    <label for="endereco">Endereço Completo *</label>
-                    <InputText id="endereco" class="form-control" @bind-Value="novoCliente.Endereco" placeholder="Rua, Número, Bairro - Cidade/UF" />
-                    <ValidationMessage For="@(() => novoCliente.Endereco)" />
+            @* --- ABA 2: ENDEREÇO --- *@
+            <div class="tab-content @(activeTab == 2 ? "show" : "hide")">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="cep">CEP</label>
+                        <div class="input-with-loader">
+                            <InputText id="cep" class="form-control" @bind-Value="novoCliente.CEP" 
+                                       @oninput="OnCEPInput" placeholder="00000-000" maxlength="9" />
+                            @if (buscandoCep) { <span class="spinner-inline"></span> }
+                        </div>
+                        <ValidationMessage For="@(() => novoCliente.CEP)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pais">País</label>
+                        <InputText id="pais" class="form-control" @bind-Value="novoCliente.Pais" placeholder="Brasil" />
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="logradouro">Logradouro (Rua/Av)</label>
+                        <InputText id="logradouro" class="form-control" @bind-Value="novoCliente.Logradouro" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="numero">Número</label>
+                        <InputText id="numero" class="form-control" @bind-Value="novoCliente.Numero" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="complemento">Complemento</label>
+                        <InputText id="complemento" class="form-control" @bind-Value="novoCliente.Complemento" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bairro">Bairro</label>
+                        <InputText id="bairro" class="form-control" @bind-Value="novoCliente.Bairro" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cidade">Cidade</label>
+                        <InputText id="cidade" class="form-control" @bind-Value="novoCliente.Cidade" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estado">Estado (UF)</label>
+                        <InputSelect id="estado" class="form-control" @bind-Value="novoCliente.Estado">
+                            <option value="">Selecione...</option>
+                            <option value="AC">Acre</option>
+                            <option value="AL">Alagoas</option>
+                            <option value="AP">Amapá</option>
+                            <option value="AM">Amazonas</option>
+                            <option value="BA">Bahia</option>
+                            <option value="CE">Ceará</option>
+                            <option value="DF">Distrito Federal</option>
+                            <option value="ES">Espírito Santo</option>
+                            <option value="GO">Goiás</option>
+                            <option value="MA">Maranhão</option>
+                            <option value="MT">Mato Grosso</option>
+                            <option value="MS">Mato Grosso do Sul</option>
+                            <option value="MG">Minas Gerais</option>
+                            <option value="PA">Pará</option>
+                            <option value="PB">Paraíba</option>
+                            <option value="PR">Paraná</option>
+                            <option value="PE">Pernambuco</option>
+                            <option value="PI">Piauí</option>
+                            <option value="RJ">Rio de Janeiro</option>
+                            <option value="RN">Rio Grande do Norte</option>
+                            <option value="RS">Rio Grande do Sul</option>
+                            <option value="RO">Rondônia</option>
+                            <option value="RR">Roraima</option>
+                            <option value="SC">Santa Catarina</option>
+                            <option value="SP">São Paulo</option>
+                            <option value="SE">Sergipe</option>
+                            <option value="TO">Tocantins</option>
+                        </InputSelect>
+                    </div>
                 </div>
             </div>
         </EditForm>
@@ -85,341 +170,113 @@
 </div>
 
 <style>
-    .page-container {
-        max-width: 900px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    }
+    .page-container { max-width: 900px; margin: 0 auto; padding: 20px; font-family: sans-serif; }
+    .page-header { margin-bottom: 32px; }
+    .header-content { display: flex; align-items: center; gap: 16px; }
+    .btn-back { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 10px; width: 48px; height: 48px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .header-text { flex: 1; }
+    .header-text h1 { font-size: 2rem; color: #2d3748; margin: 0; }
+    .actions-right { display: flex; gap: 12px; }
 
-    .page-header {
-        margin-bottom: 32px;
-    }
+    .form-container { background: white; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 
-    .header-content {
-        display: flex;
-        align-items: flex-start;
-        gap: 16px;
-    }
+    /* Tabs UI */
+    .tabs-container { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid #edf2f7; }
+    .tab-btn { padding: 12px 24px; border: none; background: none; font-weight: 600; color: #718096; cursor: pointer; position: relative; }
+    .tab-btn.active { color: #667eea; }
+    .tab-btn.active::after { content: ''; position: absolute; bottom: -2px; left: 0; width: 100%; height: 2px; background: #667eea; }
+    .tab-content.hide { display: none; }
+    .tab-content.show { display: block; animation: fadeIn 0.3s; }
 
-    .btn-back {
-        background: #f7fafc;
-        border: 2px solid #e2e8f0;
-        border-radius: 10px;
-        width: 48px;
-        height: 48px;
-        font-size: 1.5rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        color: #4a5568;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .full-width { grid-column: 1 / -1; }
+    .form-group { display: flex; flex-direction: column; }
+    label { font-weight: 600; margin-bottom: 8px; color: #4a5568; }
+    .form-control { padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; }
+    
+    .input-with-loader { position: relative; display: flex; align-items: center; }
+    .spinner-inline { position: absolute; right: 12px; width: 18px; height: 18px; border: 2px solid #e2e8f0; border-top-color: #667eea; border-radius: 50%; animation: spin 0.6s linear infinite; }
 
-        .btn-back:hover {
-            background: #edf2f7;
-            border-color: #cbd5e0;
-            transform: translateX(-4px);
-        }
+    .btn { padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+    .btn-delete { background: #fff5f5; color: #c53030; border: 1px solid #feb2b2; }
+    .btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
 
-    .page-header h1 {
-        font-size: 2.5rem;
-        color: #2d3748;
-        margin: 0 0 8px 0;
-    }
+    @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @@keyframes spin { to { transform: rotate(360deg); } }
 
-    .subtitle {
-        color: #718096;
-        font-size: 1.1rem;
-        margin: 0;
-    }
-
-    .form-container {
-        background: white;
-        border-radius: 12px;
-        padding: 32px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 24px;
-        margin-bottom: 32px;
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-    }
-
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-
-    label {
-        font-weight: 600;
-        color: #2d3748;
-        margin-bottom: 8px;
-        font-size: 0.95rem;
-    }
-
-    .form-control {
-        padding: 12px 16px;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 1rem;
-        transition: all 0.2s;
-        background: white;
-        color: #2d3748;
-    }
-
-        .form-control:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-control::placeholder {
-            color: #a0aec0;
-        }
-
-    .validation-message {
-        color: #e53e3e;
-        font-size: 0.85rem;
-        margin-top: 6px;
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 12px;
-        justify-content: flex-end;
-    }
-
-    .btn {
-        padding: 12px 32px;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-
-        .btn-primary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-    .btn-secondary {
-        background: #f7fafc;
-        color: #4a5568;
-        border: 2px solid #e2e8f0;
-    }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: #edf2f7;
-            border-color: #cbd5e0;
-        }
-
-        .btn-secondary:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-    .spinner {
-        width: 16px;
-        height: 16px;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-top-color: white;
-        border-radius: 50%;
-        animation: spin 0.6s linear infinite;
-    }
-
-    @@keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    /* Loading State */
-    .loading-container {
-        background: white;
-        border-radius: 12px;
-        padding: 60px 32px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-
-    .loading-spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid #e2e8f0;
-        border-top-color: #667eea;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto 20px;
-    }
-
-    .loading-container p {
-        color: #718096;
-        font-size: 1.1rem;
-        margin: 0;
-    }
-
-    /* Error State */
-    .error-container {
-        background: white;
-        border-radius: 12px;
-        padding: 60px 32px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        text-align: center;
-    }
-
-    .error-icon {
-        font-size: 4rem;
-        margin-bottom: 16px;
-    }
-
-    .error-container h3 {
-        color: #2d3748;
-        font-size: 1.8rem;
-        margin: 0 0 12px 0;
-    }
-
-    .error-container p {
-        color: #718096;
-        font-size: 1.1rem;
-        margin: 0 0 24px 0;
-    }
-
-    /* Responsivo */
     @@media (max-width: 768px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .form-group.full-width {
-            grid-column: 1;
-        }
-
-        .form-actions {
-            flex-direction: column-reverse;
-        }
-
-        .btn {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .header-content {
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .btn-back {
-            align-self: flex-start;
-        }
-
-        .page-header h1 {
-            font-size: 2rem;
-        }
-    }
-
-    .header-content {
-        display: flex;
-        align-items: center; /* Alinha verticalmente com os botões */
-        gap: 16px;
-        width: 100%;
-    }
-
-    .header-text {
-        flex: 1; /* Faz o texto ocupar o espaço central */
-    }
-
-    .actions-right {
-        display: flex;
-        gap: 12px;
-        align-items: center;
-    }
-
-    .btn-delete {
-        background: #fff5f5;
-        color: #c53030;
-        border: 2px solid #feb2b2;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-        .btn-delete:hover {
-            background: #feb2b2;
-            color: white;
-        }
-
-    /* Ajuste responsivo para os botões no topo */
-    @@media (max-width: 768px) {
-        .header-content {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .actions-right {
-            width: 100%;
-            margin-top: 15px;
-        }
-
-            .actions-right .btn {
-                flex: 1;
-            }
+        .form-grid { grid-template-columns: 1fr; }
+        .header-content { flex-direction: column; align-items: flex-start; }
+        .actions-right { width: 100%; margin-top: 10px; }
     }
 </style>
 
 @code {
-    private ClienteModel novoCliente = new()
-    {
-        Nome = "",
-        Telefone = "",
-        Email = "",
-        Endereco = ""
-    };
-
+    private int activeTab = 1;
+    private ClienteModel novoCliente = new() { Pais = "Brasil" };
+    private bool buscandoCep = false;
     private bool salvando = false;
     private JanelaConfirmacao? janelaConfirmacao;
 
+    // Mascara e Busca Automática de CEP
+    private async Task OnCEPInput(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString() ?? "";
+        var n = new string(val.Where(char.IsDigit).ToArray());
+
+        if (n.Length > 8) n = n.Substring(0, 8);
+
+        // Aplica mascara XXXXX-XXX
+        if (n.Length > 5)
+            novoCliente.CEP = $"{n.Substring(0, 5)}-{n.Substring(5)}";
+        else
+            novoCliente.CEP = n;
+
+        // Se atingiu 8 dígitos, busca automaticamente
+        if (n.Length == 8)
+        {
+            await BuscarCEP(n);
+        }
+    }
+
+    private async Task BuscarCEP(string cepLimpo)
+    {
+        buscandoCep = true;
+        try
+        {
+            var client = ClientFactory.CreateClient();
+            var response = await client.GetFromJsonAsync<ViaCepResponse>($"https://viacep.com.br/ws/{cepLimpo}/json/");
+            if (response != null && !response.Erro)
+            {
+                novoCliente.Logradouro = response.Logradouro;
+                novoCliente.Bairro = response.Bairro;
+                novoCliente.Cidade = response.Localidade;
+                novoCliente.Estado = response.Uf;
+                novoCliente.Pais = "Brasil";
+                ToastService.Success("Endereço preenchido!");
+            }
+        }
+        catch { ToastService.Error("Erro ao consultar CEP."); }
+        finally { buscandoCep = false; }
+    }
+
     private async Task SalvarCliente()
     {
-        if (string.IsNullOrWhiteSpace(novoCliente.Nome)) return;
+        if (string.IsNullOrWhiteSpace(novoCliente.Nome)) 
+        {
+            activeTab = 1;
+            return;
+        }
 
         salvando = true;
         try
         {
             await ClienteService.CriarAsync(novoCliente);
-            ToastService.Success("Cliente criado com sucesso!");
-            await Task.Delay(1000);
+            ToastService.Success("Cliente salvo!");
             Voltar();
         }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Erro ao salvar: {ex.Message}");
-        }
+        catch (Exception ex) { ToastService.Error(ex.Message); }
         finally { salvando = false; }
     }
 
@@ -427,17 +284,9 @@
     {
         if (janelaConfirmacao != null && await janelaConfirmacao.Show())
         {
-            try
-            {
-                await ClienteService.ExcluirAsync(novoCliente.Id);
-                ToastService.Success("Cliente excluído!");
-                await Task.Delay(1000);
-                Voltar();
-            }
-            catch (Exception ex)
-            {
-                ToastService.Error("Erro ao excluir cliente.");
-            }
+            await ClienteService.ExcluirAsync(novoCliente.Id);
+            ToastService.Success("Cliente excluído.");
+            Voltar();
         }
     }
 
@@ -446,15 +295,23 @@
     private void AplicarMascaraTelefone(ChangeEventArgs e)
     {
         var val = e.Value?.ToString() ?? "";
-        var numeros = new string(val.Where(char.IsDigit).ToArray());
+        var n = new string(val.Where(char.IsDigit).ToArray());
+        if (n.Length > 11) n = n.Substring(0, 11);
 
-        if (numeros.Length > 11) numeros = numeros.Substring(0, 11);
-
-        if (numeros.Length <= 2)
-            novoCliente.Telefone = numeros.Length > 0 ? $"({numeros}" : "";
-        else if (numeros.Length <= 7)
-            novoCliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2)}";
+        if (n.Length <= 2)
+            novoCliente.Telefone = n.Length > 0 ? $"({n}" : "";
+        else if (n.Length <= 7)
+            novoCliente.Telefone = $"({n.Substring(0, 2)}) {n.Substring(2)}";
         else
-            novoCliente.Telefone = $"({numeros.Substring(0, 2)}) {numeros.Substring(2, 5)}-{numeros.Substring(7)}";
+            novoCliente.Telefone = $"({n.Substring(0, 2)}) {n.Substring(2, 5)}-{n.Substring(7)}";
+    }
+
+    public class ViaCepResponse
+    {
+        public string Logradouro { get; set; } = "";
+        public string Bairro { get; set; } = "";
+        public string Localidade { get; set; } = "";
+        public string Uf { get; set; } = "";
+        public bool Erro { get; set; }
     }
 }

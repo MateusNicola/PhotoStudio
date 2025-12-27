@@ -20,7 +20,6 @@
         <p class="subtitle">Gerencie seus clientes cadastrados</p>
     </div>
 
-    <!-- Barra de Ações -->
     <div class="actions-bar">
         <div class="search-box">
             <span class="search-icon">🔍</span>
@@ -36,7 +35,6 @@
         </button>
     </div>
 
-    <!-- Tabela -->
     <div class="table-container">
         @if (carregando)
         {
@@ -47,10 +45,32 @@
         }
         else if (clientesFiltrados.Count == 0)
         {
-            <div class="empty-message">
-                <div class="empty-icon">👤</div>
-                <h3>Nenhum cliente encontrado</h3>
-                <p>@(string.IsNullOrWhiteSpace(filtroBusca) ? "Comece criando seu primeiro cliente." : "Tente ajustar os filtros de busca.")</p>
+            <div class="empty-state-container">
+                <div class="empty-state-content">
+                    <div class="empty-state-icon-wrapper">
+                        <span class="empty-state-icon">👥</span>
+                        <div class="empty-state-pulse"></div>
+                    </div>
+                    <h3>Nenhum cliente por aqui</h3>
+                    <p>
+                        @(string.IsNullOrWhiteSpace(filtroBusca)
+                                            ? "Sua lista de contatos está vazia. Comece cadastrando seu primeiro cliente para gerenciar seus ensaios."
+                                            : $"Não encontramos resultados para \"{filtroBusca}\". Tente ajustar sua busca.")
+                </p>
+
+                @if (string.IsNullOrWhiteSpace(filtroBusca))
+                    {
+                        <button class="btn btn-primary btn-lg" @onclick="CriarCliente">
+                            <span>✚ Cadastrar Meu Primeiro Cliente</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-outline" @onclick="() => { filtroBusca = string.Empty; }">
+                            Limpar Busca
+                        </button>
+                    }
+                </div>
             </div>
         }
         else
@@ -60,12 +80,13 @@
                     <thead>
                         <tr>
                             <th style="width: 30%;">Informações Pessoais</th>
-                            <th style="width: 25%;">Contato</th>
-                            <th style="width: 35%;">Endereço</th>
+                            <th style="width: 20%;">Contato</th>
+                            <th style="width: 40%;">Endereço</th>
+                            <th style="width: 10%; text-align: center;">País</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var c in clientesFiltrados)
+                        @foreach (var c in clientesPaginados)
                         {
                             <tr @onclick="() => Editar(c.Id)" style="cursor: pointer;">
                                 <td>
@@ -91,8 +112,21 @@
                                 <td>
                                     <div class="endereco-info">
                                         <span class="endereco-icon">📍</span>
-                                        <span class="endereco-texto" title="@c.Endereco">@c.Endereco</span>
+                                        <div class="endereco-detalhado">
+                                            @if (!string.IsNullOrEmpty(c.CEP))
+                                            {
+                                                <span class="cep-tag">@c.CEP</span>
+                                            }
+                                            <span class="endereco-texto">
+                                                @($"{c.Logradouro}{(string.IsNullOrEmpty(c.Numero) ? "" : ", " + c.Numero)}")
+                                                @($"{(string.IsNullOrEmpty(c.Bairro) ? "" : " - " + c.Bairro)}")
+                                                @($"{(string.IsNullOrEmpty(c.Cidade) ? "" : " | " + c.Cidade + "/" + c.Estado)}")
+                                            </span>
+                                        </div>
                                     </div>
+                                </td>
+                                <td style="text-align: center;">
+                                    <span class="pais-texto">@(string.IsNullOrEmpty(c.Pais) ? "Brasil" : c.Pais)</span>
                                 </td>
                             </tr>
                         }
@@ -100,108 +134,223 @@
                 </table>
             </div>
 
-            <div class="table-footer">
-                <span>Total: @clientesFiltrados.Count cliente(s)</span>
-            </div>
+            <footer class="pagination-container">
+                <div class="pagination-info">Mostrando @clientesPaginados.Count() de @clientesFiltrados.Count clientes</div>
+                <div class="pagination-controls">
+                    <button class="btn-pager" disabled="@(paginaAtual == 1)" @onclick="() => MudarPagina(paginaAtual - 1)">
+                        <span class="pager-icon">❮</span>
+                        <span class="pager-text">Anterior</span>
+                    </button>
+
+                    <div class="pager-numbers">
+                        @for (int i = 1; i <= totalPaginas; i++)
+                        {
+                            var p = i;
+                            <button class="btn-number @(p == paginaAtual ? "active" : "")" @onclick="() => MudarPagina(p)">
+                                @p
+                            </button>
+                        }
+                    </div>
+
+                    <button class="btn-pager" disabled="@(paginaAtual >= totalPaginas)" @onclick="() => MudarPagina(paginaAtual + 1)">
+                        <span class="pager-text">Próximo</span>
+                        <span class="pager-icon">❯</span>
+                    </button>
+                </div>
+            </footer>
         }
     </div>
 </div>
 
 <style>
+    /* Container de Estado Vazio */
+    .empty-state-container {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        text-align: center;
+        background: white;
+    }
+
+    .empty-state-content {
+        max-width: 400px;
+    }
+
+    .empty-state-icon-wrapper {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        border-radius: 50%;
+    }
+
+    .empty-state-icon {
+        font-size: 40px;
+        z-index: 2;
+    }
+
+    .empty-state-pulse {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: #6366f1;
+        opacity: 0.15;
+        animation: pulse-animation 2s infinite;
+    }
+
+    @@keyframes pulse-animation {
+        0%
+
+    {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+    }
+
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 15px rgba(99, 102, 241, 0);
+    }
+
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    }
+
+    }
+
+    .empty-state-content h3 {
+        font-size: 1.5rem;
+        color: #1a202c;
+        margin-bottom: 12px;
+        font-weight: 700;
+    }
+
+    .empty-state-content p {
+        color: #718096;
+        line-height: 1.6;
+        margin-bottom: 24px;
+    }
+
+    .btn-lg {
+        padding: 14px 28px;
+        font-size: 1rem;
+        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-outline {
+        background: transparent;
+        border: 2px solid #e2e8f0;
+        color: #4a5568;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .btn-outline:hover {
+            background: #f8fafc;
+            border-color: #cbd5e0;
+        }
+
     .page-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 24px;
+        overflow: hidden;
+        background-color: #f8fafc;
+        box-sizing: border-box;
     }
 
     .page-header {
-        margin-bottom: 32px;
+        margin-bottom: 20px;
+        flex-shrink: 0;
     }
 
         .page-header h1 {
-            font-size: 2.5rem;
-            color: #2d3748;
-            margin: 0 0 8px 0;
+            font-size: 2.2rem;
+            margin: 0;
+            color: #1a202c;
         }
 
     .subtitle {
         color: #718096;
-        font-size: 1.1rem;
-        margin: 0;
+        margin: 5px 0 0;
     }
+
 
     .actions-bar {
         display: flex;
         justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 20px;
+        flex-shrink: 0;
+    }
+
+    .filters-group {
+        display: flex;
+        gap: 12px;
         align-items: center;
-        margin-bottom: 24px;
-        gap: 16px;
-        flex-wrap: wrap;
     }
 
     .search-box {
-        flex: 1;
-        min-width: 250px;
-        max-width: 500px;
         position: relative;
     }
 
     .search-icon {
         position: absolute;
-        left: 14px;
+        left: 12px;
         top: 50%;
         transform: translateY(-50%);
         color: #a0aec0;
-        font-size: 1rem;
+        z-index: 1;
     }
 
     .form-control {
-        padding: 12px 16px 12px 44px;
-        border: 2px solid #e2e8f0;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
         border-radius: 8px;
-        width: 100%;
-        font-size: 1rem;
-        transition: all 0.2s;
+        background: white;
+        font-size: 0.95rem;
     }
 
-        .form-control:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-    .btn {
-        padding: 12px 32px;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    .search-box .form-control {
+        padding-left: 35px;
+        min-width: 250px;
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #6366f1;
         color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
     }
 
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
     .table-container {
+        flex: 1;
         background: white;
         border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
     }
 
     .table-scroll {
+        flex: 1;
+        overflow-y: auto;
         overflow-x: auto;
     }
 
@@ -210,265 +359,131 @@
         border-collapse: collapse;
     }
 
-        .styled-table th {
+        .styled-table thead th {
+            position: sticky;
+            top: 0;
+            background: #f8fafc;
+            padding: 16px;
             text-align: left;
-            background: #f7fafc;
-            padding: 16px 12px;
-            font-weight: 600;
-            color: #4a5568;
-            border-bottom: 2px solid #e2e8f0;
-            font-size: 0.9rem;
-            white-space: nowrap;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: #64748b;
+            border-bottom: 1px solid #e2e8f0;
         }
 
-        .styled-table td {
-            padding: 14px 12px;
-            border-bottom: 1px solid #edf2f7;
-            color: #2d3748;
-            vertical-align: middle;
-        }
-
-        .styled-table tr:hover {
-            background: #f7faff;
+        .styled-table tbody td {
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
             cursor: pointer;
         }
 
-        .styled-table tr:last-child td {
-            border-bottom: none;
+        .styled-table tr:hover {
+            background: #f8fafc;
         }
 
-        .styled-table tbody tr {
-            transition: all 0.2s;
-        }
 
-    /* Célula de Informações Pessoais */
-    .info-pessoal {
+    .pagination-container {
+        padding: 16px;
+        border-top: 1px solid #e2e8f0;
         display: flex;
-        flex-direction: column;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
     }
 
-    .nome-row {
+
+    .info-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .sub-info {
         display: flex;
         align-items: center;
         gap: 10px;
     }
 
-    .avatar-icon {
-        font-size: 1.5rem;
-        flex-shrink: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    .tipo-badge, .situacao-badge {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        color: white;
+        font-weight: 600;
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .btn-pager {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background-color: white;
+        color: #4a5568;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .btn-pager:hover:not(:disabled) {
+            background-color: #f7fafc;
+            border-color: #cbd5e0;
+            color: #2d3748;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .btn-pager:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: #f1f5f9;
+        }
+
+    .pager-numbers {
+        display: flex;
+        gap: 4px;
+    }
+
+    .btn-number {
         width: 36px;
         height: 36px;
-        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-    }
-
-    .nome-principal {
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #64748b;
         font-weight: 600;
-        font-size: 1rem;
-        color: #2d3748;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        flex: 1;
-        min-width: 0;
-    }
-
-    /* Célula de Contato */
-    .contato-cell {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .contato-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .contato-icon {
-        font-size: 0.9rem;
-        flex-shrink: 0;
-        opacity: 0.7;
-    }
-
-    .contato-texto {
-        color: #2d3748;
-        font-size: 0.95rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .email-texto {
-        color: #3182ce;
-        text-decoration: none;
-    }
-
-    /* Célula de Endereço */
-    .endereco-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .endereco-icon {
-        font-size: 0.9rem;
-        flex-shrink: 0;
-        opacity: 0.7;
-    }
-
-    .endereco-texto {
-        color: #2d3748;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    /* Ações */
-    .actions-cell {
-        text-align: center;
-    }
-
-    .icon-btn {
-        border: none;
-        background: none;
-        font-size: 1.2rem;
         cursor: pointer;
-        padding: 8px;
-        border-radius: 6px;
         transition: all 0.2s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 4px;
     }
 
-        .icon-btn.edit {
-            color: #4a5568;
+        .btn-number:hover:not(.active) {
+            background-color: #edf2f7;
+            color: #2d3748;
         }
 
-            .icon-btn.edit:hover {
-                background: #ebf8ff;
-                color: #3182ce;
-            }
-
-        .icon-btn.delete {
-            color: #4a5568;
+        .btn-number.active {
+            background-color: #6366f1;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
         }
 
-            .icon-btn.delete:hover {
-                background: #fff5f5;
-                color: #e53e3e;
-            }
-
-    .table-footer {
-        padding: 16px;
-        background: #f7fafc;
-        border-top: 1px solid #e2e8f0;
-        color: #718096;
-        font-size: 0.9rem;
-        text-align: right;
-    }
-
-    /* Loading State */
-    .loading-container {
-        padding: 60px 32px;
-        text-align: center;
-    }
-
-    .loading-spinner {
-        width: 48px;
-        height: 48px;
-        border: 4px solid #e2e8f0;
-        border-top-color: #667eea;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto 20px;
-    }
-
-    @@keyframes spin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    .loading-container p {
-        color: #718096;
-        font-size: 1.1rem;
-        margin: 0;
-    }
-
-    /* Empty State */
-    .empty-message {
-        padding: 60px 32px;
-        text-align: center;
-    }
-
-    .empty-icon {
-        font-size: 4rem;
-        margin-bottom: 16px;
-        opacity: 0.5;
-    }
-
-    .empty-message h3 {
-        color: #2d3748;
-        font-size: 1.5rem;
-        margin: 0 0 8px 0;
-    }
-
-    .empty-message p {
-        color: #718096;
-        font-size: 1rem;
-        margin: 0;
-    }
-
-    /* Responsivo */
-    @@media (max-width: 1024px) {
-        .styled-table {
-            font-size: 0.9rem;
-        }
-
-        .nome-principal {
-            font-size: 0.95rem;
-        }
-
-        .contato-texto {
-            font-size: 0.85rem;
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .actions-bar {
-            flex-direction: column;
-        }
-
-        .search-box {
-            max-width: 100%;
-        }
-
-        .btn {
-            width: 100%;
-            justify-content: center;
-        }
-
-        .styled-table th:nth-child(3),
-        .styled-table td:nth-child(3) {
+    @@media (max-width: 600px) {
+        .pager-text {
             display: none;
         }
 
-        .avatar-icon {
-            width: 32px;
-            height: 32px;
-            font-size: 1.2rem;
-        }
-
-        .contato-cell {
-            gap: 6px;
+        .btn-pager {
+            padding: 8px 12px;
         }
     }
 </style>
@@ -479,6 +494,12 @@
     private bool carregando = true;
     private string _filtroBusca = "";
     private JanelaConfirmacao? janelaConfirmacao;
+
+    // PAGINAÇÃO
+    private int paginaAtual = 1;
+    private int itensPorPagina = 5; // Você pode ajustar este número
+    private int totalPaginas => (int)Math.Ceiling((double)clientesFiltrados.Count / itensPorPagina);
+    private IEnumerable<ClienteModel> clientesPaginados => clientesFiltrados.Skip((paginaAtual - 1) * itensPorPagina).Take(itensPorPagina);
 
     private string filtroBusca
     {
@@ -493,7 +514,6 @@
         carregando = true;
         try
         {
-            // A página apenas solicita os dados
             clientes = await ClienteService.ListarTodosAsync();
             AplicarFiltro();
         }
@@ -501,33 +521,20 @@
         {
             ToastService.Error($"Erro ao carregar clientes: {ex.Message}");
         }
-        finally
-        {
-            carregando = false;
-        }
+        finally { carregando = false; }
     }
 
-    private async Task Excluir(int id)
+    private void MudarPagina(int novaPagina)
     {
-        if (janelaConfirmacao == null) return;
-
-        bool confirmado = await janelaConfirmacao.Show();
-        if (!confirmado) return;
-
-        try
+        if (novaPagina >= 1 && novaPagina <= totalPaginas)
         {
-            await ClienteService.ExcluirAsync(id);
-            await CarregarClientes();
-            ToastService.Success("Cliente excluído com sucesso!");
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Erro ao excluir: {ex.Message}");
+            paginaAtual = novaPagina;
         }
     }
 
     private void AplicarFiltro()
     {
+        paginaAtual = 1; // Sempre volta para a página 1 ao filtrar
         if (string.IsNullOrWhiteSpace(filtroBusca))
         {
             clientesFiltrados = clientes.ToList();
@@ -536,19 +543,12 @@
         {
             clientesFiltrados = clientes
                 .Where(c =>
-                    c.Nome.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
-                    c.Email.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase))
+                    (c.Nome?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (c.Email?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
         }
     }
 
-    private void CriarCliente()
-    {
-        Navigation.NavigateTo("/clientes/criarCliente");
-    }
-
-    private void Editar(int id)
-    {
-        Navigation.NavigateTo($"/clientes/editarCliente/{id}");
-    }
+    private void CriarCliente() => Navigation.NavigateTo("/clientes/criarCliente");
+    private void Editar(int id) => Navigation.NavigateTo($"/clientes/editarCliente/{id}");
 }
