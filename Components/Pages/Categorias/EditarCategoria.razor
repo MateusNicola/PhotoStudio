@@ -8,6 +8,7 @@
 @inject CategoriaService CategoriaService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Editar Categoria - Estúdio de Fotografia</PageTitle>
 
@@ -19,7 +20,7 @@
             </button>
             <div>
                 <h1>Editar Categoria</h1>
-                <p class="subtitle">Atualize as informações da categoria</p>
+                <p class="subtitle">Atualize as informações da categoria de ensaio</p>
             </div>
         </div>
     </div>
@@ -28,18 +29,16 @@
     {
         <div class="loading-container">
             <div class="loading-spinner"></div>
-            <p>Carregando dados da categoria...</p>
+            <p>Carregando dados...</p>
         </div>
     }
     else if (categoria == null)
     {
         <div class="error-container">
             <div class="error-icon">⚠️</div>
-            <h3>Categoria não encontrada</h3>
-            <p>A categoria que você está tentando editar não existe.</p>
-            <button class="btn btn-primary" @onclick="Voltar">
-                Voltar para Categorias
-            </button>
+            <h3>Acesso Negado ou Não Encontrado</h3>
+            <p>A categoria solicitada não existe ou você não tem permissão para editá-la.</p>
+            <button class="btn btn-primary" @onclick="Voltar">Voltar para Categorias</button>
         </div>
     }
     else
@@ -402,11 +401,24 @@
     private CategoriaModel? categoria;
     private bool carregando = true;
     private bool salvando = false;
+    private int usuarioLogadoId;
     private string codigoOriginal = "";
 
     protected override async Task OnInitializedAsync()
     {
+        await ObterUsuarioLogado();
         await CarregarCategoria();
+    }
+
+    private async Task ObterUsuarioLogado()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            var claimId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(claimId, out usuarioLogadoId);
+        }
     }
 
     private async Task CarregarCategoria()
@@ -414,23 +426,23 @@
         carregando = true;
         try
         {
-            categoria = await CategoriaService.ObterPorIdAsync(Id);
+            var catEncontrada = await CategoriaService.ObterPorIdAsync(Id);
 
-            if (categoria != null)
+            // VALIDAÇÃO DE SEGURANÇA: Só permite carregar se a categoria pertencer ao usuário logado
+            if (catEncontrada != null && catEncontrada.UsuarioId == usuarioLogadoId)
             {
+                categoria = catEncontrada;
                 codigoOriginal = categoria.Codigo;
-
-                // Correção preventiva para o erro "Data is Null"
-                // Se a cor vier nula do banco, definimos uma cor padrão
-                if (string.IsNullOrEmpty(categoria.Cor))
-                {
-                    categoria.Cor = "#6366f1";
-                }
+                if (string.IsNullOrEmpty(categoria.Cor)) categoria.Cor = "#6366f1";
+            }
+            else
+            {
+                categoria = null; // Resultará na tela de erro/acesso negado
             }
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Erro ao carregar: {ex.Message}");
+            ToastService.Error($"Erro ao carregar categoria: {ex.Message}");
         }
         finally
         {
@@ -440,7 +452,7 @@
 
     private async Task Salvar()
     {
-        if (categoria == null) return;
+        if (categoria == null || usuarioLogadoId == 0) return;
 
         salvando = true;
         try
@@ -448,19 +460,19 @@
             categoria.Codigo = categoria.Codigo?.ToUpper().Trim() ?? "";
             categoria.Descricao = categoria.Descricao?.Trim() ?? "";
 
-            // Verifica duplicidade se o código mudou
+            // Verifica duplicidade apenas nas categorias do PRÓPRIO usuário
             if (categoria.Codigo != codigoOriginal)
             {
-                var todas = await CategoriaService.ListarTodasAsync();
-                if (todas.Any(c => c.Codigo == categoria.Codigo && c.Id != Id))
+                var categoriasUsuario = await CategoriaService.ListarPorUsuarioAsync(usuarioLogadoId);
+                if (categoriasUsuario.Any(c => c.Codigo == categoria.Codigo && c.Id != Id))
                 {
-                    ToastService.Error("Já existe uma categoria com este código!");
+                    ToastService.Error("Você já possui uma categoria com este código!");
                     return;
                 }
             }
 
             await CategoriaService.AtualizarAsync(categoria);
-            ToastService.Success("Categoria atualizada!");
+            ToastService.Success("Categoria atualizada com sucesso!");
             await Task.Delay(500);
             Navigation.NavigateTo("/categorias");
         }

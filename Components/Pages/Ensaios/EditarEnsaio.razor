@@ -11,6 +11,7 @@
 @inject ClienteService ClienteService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject CategoriaService CategoriaService
 @attribute [Authorize]
 
 <PageTitle>Ensaio - Estúdio de Fotografia</PageTitle>
@@ -81,16 +82,19 @@
                         <ValidationMessage For="@(() => ensaio.Titulo)" />
                     </div>
 
-                    <!-- Tipo de Ensaio -->
                     <div class="form-group">
-                        <label for="tipo">Tipo de Ensaio *</label>
-                        <InputSelect id="tipo" @bind-Value="ensaio.Tipo" class="form-control">
-                            @foreach (var tipo in Enum.GetValues<TipoEnsaio>())
+                        <label for="categoria">Categoria *</label>
+                        <InputSelect id="categoria" @bind-Value="ensaio.CategoriaId" class="form-control">
+                            <option value="0">Selecione uma categoria</option>
+                            @foreach (var cat in categorias)
                             {
-                                <option value="@tipo">@tipo</option>
+                                <option value="@cat.Id">@cat.Descricao</option>
                             }
                         </InputSelect>
-                        <ValidationMessage For="@(() => ensaio.Tipo)" />
+                        @if (ensaio.CategoriaId == 0)
+                        {
+                            <small class="validation-message">Selecione uma categoria válida.</small>
+                        }
                     </div>
 
                     <!-- Cliente -->
@@ -496,6 +500,7 @@
 
     private EnsaioModel? ensaio;
     private List<ClienteModel> clientes = new();
+    private List<CategoriaModel> categorias = new();
     private bool carregando = true;
     private bool salvando = false;
     private bool excluindo = false;
@@ -507,17 +512,23 @@
     {
         try
         {
-            var tarefas = new Task[] {
+            await Task.WhenAll(
                 CarregarClientes(),
+                CarregarCategorias(),
                 CarregarEnsaio()
-        };
-            await Task.WhenAll(tarefas);
+            );
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Erro ao carregar dados: " + ex.Message);
         }
         finally
         {
             carregando = false;
         }
     }
+
+    private async Task CarregarCategorias() => categorias = await CategoriaService.ListarTodasAsync();
 
     private async Task CarregarClientes()
     {

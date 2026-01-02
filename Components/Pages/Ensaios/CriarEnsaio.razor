@@ -12,6 +12,8 @@
 @inject EnsaioService EnsaioService
 @inject ClienteService ClienteService
 @inject ToastService ToastService
+@inject CategoriaService CategoriaService
+@inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
 <PageTitle>Ensaio - Estúdio de Fotografia</PageTitle>
@@ -63,13 +65,20 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="tipo">Tipo de Ensaio *</label>
-                    <InputSelect id="tipo" class="form-control" @bind-Value="novoEnsaio.Tipo">
-                        @foreach (TipoEnsaio tipo in Enum.GetValues(typeof(TipoEnsaio)))
+                    <div class="label-with-button">
+                        <label for="categoria">Categoria *</label>                        
+                    </div>
+                    <select id="categoria" @bind="novoEnsaio.CategoriaId" class="form-control">
+                        <option value="0">Selecione a categoria</option>
+                        @foreach (var cat in categorias)
                         {
-                            <option value="@tipo">@tipo</option>
+                            <option value="@cat.Id">@cat.Codigo - @cat.Descricao</option>
                         }
-                    </InputSelect>
+                    </select>
+                    @if (novoEnsaio.CategoriaId == 0)
+                    {
+                        <span class="validation-message">A categoria é obrigatória.</span>
+                    }
                 </div>
 
                 <div class="form-group">
@@ -449,6 +458,17 @@
             font-size: 1.5rem;
         }
     }
+
+    .btn-link-small {
+        font-size: 0.8rem;
+        color: #667eea;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+        .btn-link-small:hover {
+            text-decoration: underline;
+        }
 </style>
 
 @code {
@@ -457,13 +477,14 @@
     {
         Titulo = "",
         Local = "",
-        Tipo = TipoEnsaio.Retrato,
         Situacao = Situacao.Agendado,
         Data = DateTime.Now,
-        ClienteId = 0
+        ClienteId = 0,
+        CategoriaId = 0
     };
 
     private List<ClienteModel> clientes = new();
+    private List<CategoriaModel> categorias = new();
     private DateTime dataEnsaio = DateTime.Today;
     private string horaEnsaio = "10:00";
     private bool salvando = false;
@@ -472,7 +493,15 @@
 
     protected async override Task OnInitializedAsync()
     {
-        clientes = await ClienteService.ListarTodosAsync();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var claimId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (int.TryParse(claimId, out int usuarioId))
+        {
+            clientes = await ClienteService.ListarTodosAsync();
+            categorias = await CategoriaService.ListarPorUsuarioAsync(usuarioId);
+        }
     }
 
     private async Task SalvarEnsaio()
@@ -480,6 +509,12 @@
         if (novoEnsaio.ClienteId == 0)
         {
             ToastService.Error("Selecione um cliente.");
+            return;
+        }
+
+        if (novoEnsaio.CategoriaId == 0)
+        {
+            ToastService.Error("Selecione uma categoria.");
             return;
         }
 
@@ -491,10 +526,13 @@
                 novoEnsaio.Data = dataEnsaio.Date.Add(hora);
             }
 
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var claimId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (int.TryParse(claimId, out int uId)) novoEnsaio.UsuarioId = uId.ToString();
+
             if (idEnsaioCriado == 0)
             {
                 await EnsaioService.CriarAsync(novoEnsaio);
-                idEnsaioCriado = 1;
                 ToastService.Success("Ensaio criado com sucesso!");
                 await Task.Delay(1000);
                 Voltar();

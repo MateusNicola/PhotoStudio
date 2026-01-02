@@ -6,8 +6,10 @@
 @using PhotoStudio.app.Services.Ensaios
 @rendermode InteractiveServer
 @inject EnsaioService EnsaioService
+@inject CategoriaService CategoriaService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
 <PageTitle>Ensaios - Estúdio de Fotografia</PageTitle>
@@ -33,11 +35,11 @@
             </div>
 
             <div class="filter-item">
-                <select class="form-control" @bind="filtroTipo" @bind:after="AplicarFiltro">
-                    <option value="">Todos os Tipos</option>
-                    @foreach (var tipo in Enum.GetValues<TipoEnsaio>())
+                <select class="form-control" @bind="filtroCategoriaId" @bind:after="AplicarFiltro">
+                    <option value="0">Todas as Categorias</option>
+                    @foreach (var cat in categorias)
                     {
-                        <option value="@tipo">@tipo</option>
+                        <option value="@cat.Id">@cat.Descricao</option>
                     }
                 </select>
             </div>
@@ -110,7 +112,10 @@
                                         <div class="info-cell">
                                             <span class="titulo-principal">@e.Titulo</span>
                                             <div class="sub-info">
-                                                <span class="tipo-badge" style="background: @ObterCorTipo(e.Tipo)">@e.Tipo</span>
+                                                @if (e.Categoria != null)
+                                                {
+                                                    <span class="tipo-badge" style="background: @e.Categoria.Cor">@e.Categoria.Descricao</span>
+                                                }
                                                 <span class="cliente-nome">👤 @e.Cliente.Nome</span>
                                             </div>
                                         </div>
@@ -159,7 +164,6 @@
 </div>
 
 <style>
-
     .page-container {
         height: 100vh;
         display: flex;
@@ -429,23 +433,20 @@
     }
 
     @@keyframes pulse-animation {
-        0%
+        0% {
+            transform: scale(0.9);
+            opacity: 0.2;
+        }
 
-    {
-        transform: scale(0.9);
-        opacity: 0.2;
-    }
+        70% {
+            transform: scale(1.2);
+            opacity: 0;
+        }
 
-    70% {
-        transform: scale(1.2);
-        opacity: 0;
-    }
-
-    100% {
-        transform: scale(0.9);
-        opacity: 0;
-    }
-
+        100% {
+            transform: scale(0.9);
+            opacity: 0;
+        }
     }
 
     .empty-state-content h3 {
@@ -485,31 +486,50 @@
             border-color: #6366f1;
             color: #6366f1;
         }
+
+    .btn-clear {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 5px;
+    }
 </style>
 
 @code {
     private List<EnsaioModel> ensaios = new();
     private List<EnsaioModel> ensaiosFiltrados = new();
+    private List<CategoriaModel> categorias = new();
     private bool carregando = true;
     private string filtroBusca = "";
     private DateTime? filtroData;
-    private TipoEnsaio? filtroTipo;
+    private int filtroCategoriaId = 0; // Mudado de Enum para ID
     private int paginaAtual = 1;
-    private int itensPorPagina = 4;
+    private int itensPorPagina = 6;
 
     private JanelaConfirmacao? janelaConfirmacao;
-    private bool TemFiltroAtivo => !string.IsNullOrWhiteSpace(filtroBusca) || filtroData.HasValue || filtroTipo.HasValue;
-    private int totalPaginas => (int)Math.Ceiling((double)ensaiosFiltrados.Count / itensPorPagina);
+    private bool TemFiltroAtivo => !string.IsNullOrWhiteSpace(filtroBusca) || filtroData.HasValue || filtroCategoriaId != 0;
+    private int totalPaginas => (int)Math.Ceiling((double)ensaiosFiltrados.Count / (itensPorPagina == 0 ? 1 : itensPorPagina));
     private IEnumerable<EnsaioModel> ensaiosPaginados => ensaiosFiltrados.Skip((paginaAtual - 1) * itensPorPagina).Take(itensPorPagina);
 
-    protected override async Task OnInitializedAsync() => await CarregarEnsaios();
+    protected override async Task OnInitializedAsync() => await CarregarDados();
 
-    private async Task CarregarEnsaios()
+    private async Task CarregarDados()
     {
         carregando = true;
         try
         {
-            ensaios = await EnsaioService.ListarTodosAsync();
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var claimId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (int.TryParse(claimId, out int usuarioId))
+            {
+                // Carrega categorias do usuário para o filtro
+                categorias = await CategoriaService.ListarPorUsuarioAsync(usuarioId);
+                // Carrega ensaios (O EnsaioService já deve trazer o Objeto Categoria junto)
+                ensaios = await EnsaioService.ListarTodosAsync();
+            }
             AplicarFiltro();
         }
         finally { carregando = false; }
@@ -527,23 +547,18 @@
     {
         paginaAtual = 1;
         ensaiosFiltrados = ensaios
-            .Where(e => (string.IsNullOrEmpty(filtroBusca) || e.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) || e.Cliente.Nome.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase))
+            .Where(e => (string.IsNullOrEmpty(filtroBusca) ||
+                         e.Titulo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
+                         (e.Cliente != null && e.Cliente.Nome.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase)))
                      && (!filtroData.HasValue || e.Data.Date == filtroData.Value.Date)
-                     && (!filtroTipo.HasValue || e.Tipo == filtroTipo.Value))
+                     && (filtroCategoriaId == 0 || e.CategoriaId == filtroCategoriaId))
             .OrderByDescending(e => e.Data).ToList();
     }
 
-    private void LimparFiltros() { filtroBusca = ""; filtroData = null; filtroTipo = null; AplicarFiltro(); }
+    private void LimparFiltros() { filtroBusca = ""; filtroData = null; filtroCategoriaId = 0; AplicarFiltro(); }
     private void Editar(int id) => Navigation.NavigateTo($"/ensaios/editarEnsaio/{id}");
     private void IrParaCriarEnsaio() => Navigation.NavigateTo("/ensaios/criarEnsaio");
 
-    private string ObterCorTipo(TipoEnsaio t) => t switch
-    {
-        TipoEnsaio.Casamento => "#8b5cf6",
-        TipoEnsaio.Gestante => "#ec4899",
-        TipoEnsaio.Infantil => "#3b82f6",
-        _ => "#64748b"
-    };
     private string ObterCorSituacao(Situacao s) => s switch
     {
         Situacao.Concluido => "#10b981",

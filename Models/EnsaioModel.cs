@@ -6,8 +6,7 @@ namespace PhotoStudio.app.Models
     public class EnsaioModel
     {
         public int Id { get; set; }
-        public required string Titulo { get; set; }
-        public required TipoEnsaio Tipo { get; set; }
+        public required string Titulo { get; set; }        
         public required DateTime Data { get; set; }
         public required string Local { get; set; }
         public decimal? Valor { get; set; }
@@ -16,15 +15,11 @@ namespace PhotoStudio.app.Models
         public required int ClienteId { get; set; }
         public ClienteModel Cliente { get; set; } = null!;
         public string UsuarioId { get; set; }
-    }
 
-    public enum TipoEnsaio
-    {
-        Retrato = 1,
-        Casamento = 2,
-        Gestante = 3,
-        Infantil = 4,
-        Evento = 5
+        public int CategoriaId { get; set; }
+
+        [ForeignKey("CategoriaId")]
+        public virtual CategoriaModel? Categoria { get; set; }
     }
 
     public enum Situacao

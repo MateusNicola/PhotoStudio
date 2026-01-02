@@ -18,16 +18,7 @@ public class UsuarioModel
     public DateTime? UltimoLogin { get; set; }
 
     [Column("ativo")]
-    public string Ativo { get; set; } = "S";
+    public string Ativo { get; set; } = "S";   
 
-    [Column("alterado_por")]
-    public string? AlteradoPor { get; set; }
-
-    [Column("criado_por")]
-    public string? CriadoPor { get; set; }
-
-    [Column("alterado_em")]
-    public DateTime? AlteradoEm { get; set; }
-
-    public string Perfil { get; set; } = "User";
+    public string Perfil { get; set; } = "user";
 }

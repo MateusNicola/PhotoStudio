@@ -32,8 +32,9 @@ namespace PhotoStudio.app.Services.Ensaios
             using var db = _dbFactory.CreateDbContext();
 
             return await db.Ensaios
-                .Where(e => e.UsuarioId == userId) // FILTRO POR USUÁRIO
-                .Include(e => e.Cliente)
+                .Where(e => e.UsuarioId == userId)
+                .Include(e => e.Cliente)          
+                .Include(e => e.Categoria)        
                 .OrderByDescending(e => e.Data)
                 .ToListAsync();
         }

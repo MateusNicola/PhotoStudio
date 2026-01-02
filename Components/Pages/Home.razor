@@ -11,7 +11,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
-<PageTitle>Dashboard - Estúdio de Fotografia</PageTitle>
+<PageTitle>Estúdio de Fotografia</PageTitle>
 
 <div class="dashboard-container">
     <!-- Header -->
@@ -98,21 +98,36 @@
                     @foreach (var ensaio in ensaios.Where(e => e.Data >= DateTime.Today).OrderBy(e => e.Data).Take(7))
                     {
                         var diasRestantes = (ensaio.Data.Date - DateTime.Today).Days;
+
                         <div class="ensaio-horizontal-item" @onclick="() => EditarEnsaio(ensaio.Id)">
                             <div class="date-badge">
                                 <span class="month">@ensaio.Data.ToString("MMM")</span>
                                 <span class="day">@ensaio.Data.Day</span>
                             </div>
+
                             <div class="ensaio-info">
-                                <h4>@ensaio.Titulo</h4>
+                                <h4 style="white-space: normal; word-break: break-word; overflow: visible; max-width: none;">
+                                    @ensaio.Titulo
+                                </h4>
+
                                 <div class="ensaio-meta">
                                     <span>🕐 @ensaio.Data.ToString("HH:mm")</span>
                                     <span class="dias-contagem @(diasRestantes <= 2 ? "urgente" : "")">
                                         @(diasRestantes == 0 ? "Hoje" : diasRestantes == 1 ? "Amanhã" : $"Em {diasRestantes} dias")
                                     </span>
                                 </div>
+
+                                <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                    <span class="situacao-badge-mini" style="background-color: @ObterCorSituacao(ensaio.Situacao)">
+                                        @ensaio.Situacao.ToString()
+                                    </span>
+
+                                    <span style="font-size: 0.75rem; color: @(ensaio.Categoria?.Cor ?? "#a0aec0"); font-weight: bold;">
+                                        • @ensaio.Categoria?.Descricao
+                                    </span>
+                                </div>
                             </div>
-                            <div class="tipo-tag" style="background: @ObterCorTipo(ensaio.Tipo)"></div>
+                            <div class="tipo-tag" style="background: @(ensaio.Categoria?.Cor ?? "#a0aec0")"></div>
                         </div>
                     }
                 }
@@ -765,25 +780,25 @@
     }
 
     .ensaio-horizontal-item {
+        cursor: pointer; 
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 15px;
         padding: 12px;
         background: #f8fafc;
         border-radius: 10px;
         border: 1px solid #e2e8f0;
-        cursor: pointer;
         transition: all 0.2s;
         position: relative;
         overflow: hidden;
     }
 
-        .ensaio-horizontal-item:hover {
-            background: white;
-            border-color: #667eea;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            transform: translateY(-2px);
-        }
+    .ensaio-horizontal-item:hover {
+        background: #ffffff;
+        border-color: #667eea;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
 
     .date-badge {
         display: flex;
@@ -810,12 +825,13 @@
     .ensaio-info h4 {
         margin: 0;
         font-size: 0.95rem;
-        color: #2d3748;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        max-width: 180px;
-    }
+        color: #2d3748;        
+        white-space: normal; 
+        overflow: visible;
+        text-overflow: unset; 
+        max-width: 100%; 
+        word-break: break-word;
+    }   
 
     .ensaio-meta {
         display: flex;
@@ -846,6 +862,16 @@
         font-style: italic;
     }
 
+    .situacao-badge-mini {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: white;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: inline-block;
+    }
 </style>
 
 <script>
@@ -881,7 +907,7 @@
     {
         var dados = await DashboardService.GetDashboardDataAsync();
 
-        ensaios = dados.Ensaios;
+        ensaios = dados.Ensaios; 
         clientes = dados.Clientes;
         ensaiosMes = dados.EnsaiosMes;
         clientesNovosMes = dados.ClientesNovosMes;
@@ -941,15 +967,10 @@
         Navigation.NavigateTo("/clientes/criarCliente");
     }
 
-    private string ObterCorTipo(TipoEnsaio tipo) => tipo switch
+    private string ObterCorCategoria(EnsaioModel ensaio)
     {
-        TipoEnsaio.Casamento => "#f093fb",
-        TipoEnsaio.Gestante => "#fa709a",
-        TipoEnsaio.Infantil => "#4facfe",
-        TipoEnsaio.Evento => "#43e97b",
-        TipoEnsaio.Retrato => "#667eea",
-        _ => "#a0aec0"
-    };
+        return ensaio.Categoria?.Cor ?? "#a0aec0"; // Cor cinza se não tiver categoria
+    }
 
     private string ObterCorSituacao(Situacao situacao) => situacao switch
     {
