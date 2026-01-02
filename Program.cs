@@ -22,6 +22,7 @@ public class Program
         builder.Services.AddScoped<EnsaioService>();
         builder.Services.AddSingleton<ToastService>();
         builder.Services.AddScoped<DashboardService>();
+        builder.Services.AddScoped<CategoriaService>();
 
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 

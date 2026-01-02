@@ -1,0 +1,279 @@
+﻿@page "/categorias/criar"
+@rendermode InteractiveServer
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Data
+@using PhotoStudio.app.Services
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AppDbContext DbContext
+@inject CategoriaService CategoriaService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Nova Categoria - Estúdio de Fotografia</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <div class="header-content">
+            <button class="btn-back" @onclick="Voltar" title="Voltar">
+                <span>←</span>
+            </button>
+            <div>
+                <h1>Nova Categoria</h1>
+                <p class="subtitle">Adicione uma nova categoria de ensaio personalizada</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <EditForm Model="@novaCategoria" OnValidSubmit="Salvar">
+            <DataAnnotationsValidator />
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="codigo">Código *</label>
+                    <InputText id="codigo" class="form-control" @bind-Value="novaCategoria.Codigo"
+                               placeholder="Ex: CASA" maxlength="5"
+                               style="text-transform: uppercase;" />
+                    <span class="field-hint">Máximo 5 caracteres.</span>
+                    <ValidationMessage For="@(() => novaCategoria.Codigo)" />
+                </div>
+
+                <div class="form-group">
+                    <label for="cor">Cor de Identificação *</label>
+                    <div class="color-picker-wrapper">
+                        <InputText type="color" id="cor" class="form-control color-input" @bind-Value="novaCategoria.Cor" />
+                        <span class="color-hex">@novaCategoria.Cor</span>
+                    </div>
+                    <span class="field-hint">Usada para identificar na agenda.</span>
+                    <ValidationMessage For="@(() => novaCategoria.Cor)" />
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="descricao">Descrição *</label>
+                    <InputText id="descricao" class="form-control" @bind-Value="novaCategoria.Descricao"
+                               placeholder="Ex: Ensaio de Casamento" maxlength="250" />
+                    <ValidationMessage For="@(() => novaCategoria.Descricao)" />
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" @onclick="Voltar" disabled="@salvando">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" disabled="@salvando">
+                    @if (salvando)
+                    {
+                        <span class="spinner"></span>
+                        <span>Salvando...</span>
+                    }
+                    else
+                    {
+                        <span>✓ Criar Categoria</span>
+                    }
+                </button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+<style>
+    /* ... Seus estilos CSS permanecem os mesmos, adicionei apenas os essenciais abaixo ... */
+    .page-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: sans-serif;
+    }
+
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .btn-back {
+        background: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-control {
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        width: 100%;
+    }
+
+    .color-picker-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #f8fafc;
+        padding: 4px 12px;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        width: fit-content;
+    }
+
+    .color-input {
+        width: 50px;
+        height: 40px;
+        border: none;
+        cursor: pointer;
+        background: transparent;
+    }
+
+    .color-hex {
+        font-family: monospace;
+        font-weight: 700;
+        color: #4a5568;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 12px 32px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 2px solid #e2e8f0;
+    }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        display: inline-block;
+    }
+    @@keyframes spin {
+        to
+
+    {
+        transform: rotate(360deg);
+    }
+
+    }
+</style>
+
+@code {
+    private CategoriaModel novaCategoria = new()
+    {
+        Codigo = "",
+        Descricao = "",
+        Cor = "#6366f1"
+    };
+
+    private bool salvando = false;
+    private int usuarioLogadoId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Obtém o usuário logado via Claims
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            var claimId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(claimId, out usuarioLogadoId);
+        }
+        else
+        {
+            // Se não estiver logado, redireciona
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private async Task Salvar()
+    {
+        if (usuarioLogadoId == 0)
+        {
+            ToastService.Error("Usuário não identificado. Faça login novamente.");
+            return;
+        }
+
+        salvando = true;
+        try
+        {
+            // Tratamento de dados
+            novaCategoria.Codigo = novaCategoria.Codigo?.ToUpper().Trim() ?? "";
+            novaCategoria.Descricao = novaCategoria.Descricao?.Trim() ?? "";
+            novaCategoria.CriadoEm = DateTime.Now;
+
+            // O MAIS IMPORTANTE: Vincula a categoria ao usuário logado
+            novaCategoria.UsuarioId = usuarioLogadoId;
+
+            // Verifica se o CÓDIGO já existe APENAS para este usuário
+            var categoriasUsuario = await CategoriaService.ListarPorUsuarioAsync(usuarioLogadoId);
+            if (categoriasUsuario.Any(c => c.Codigo == novaCategoria.Codigo))
+            {
+                ToastService.Error("Você já possui uma categoria com este código!");
+                return;
+            }
+
+            await CategoriaService.CriarAsync(novaCategoria);
+
+            ToastService.Success("Categoria criada com sucesso!");
+            await Task.Delay(1000); // Delay curto para o usuário ver o feedback
+            Navigation.NavigateTo("/categorias");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao criar categoria: {ex.Message}");
+        }
+        finally
+        {
+            salvando = false;
+        }
+    }
+
+    private void Voltar() => Navigation.NavigateTo("/categorias");
+}

@@ -90,7 +90,7 @@ public class AuthService
 
         if (!string.IsNullOrWhiteSpace(novaSenha))
         {
-            usuario.Senha = BCrypt.Net.BCrypt.HashPassword(novaSenha);
+            usuario.Senha = BCrypt.Net.BCrypt.EnhancedHashPassword(novaSenha);
         }
 
         await _context.SaveChangesAsync();
@@ -122,7 +122,10 @@ public class AuthService
             return (false, "Erro ao verificar senha. Formato inválido.");
         }
 
-        usuario.Senha = BCrypt.Net.BCrypt.HashPassword(novaSenha);
+        if (!string.IsNullOrWhiteSpace(novaSenha))
+        {
+            usuario.Senha = BCrypt.Net.BCrypt.EnhancedHashPassword(novaSenha);
+        }
         await _context.SaveChangesAsync();
 
         return (true, "Senha alterada com sucesso!");

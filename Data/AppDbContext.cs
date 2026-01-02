@@ -10,6 +10,9 @@ namespace PhotoStudio.app.Data
 
         public DbSet<EnsaioModel> Ensaios => Set<EnsaioModel>();
         public DbSet<ClienteModel> Clientes => Set<ClienteModel>();
+
         public DbSet<UsuarioModel> Usuarios { get; set; }
+
+        public DbSet<CategoriaModel> Categorias { get; set; }
     }
 }

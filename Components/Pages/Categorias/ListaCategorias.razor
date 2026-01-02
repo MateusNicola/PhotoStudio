@@ -1,0 +1,384 @@
+﻿@page "/categorias"
+@rendermode InteractiveServer
+@using Microsoft.EntityFrameworkCore
+@using PhotoStudio.app.Data
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Services
+@using PhotoStudio.app.Components.Shared
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@inject CategoriaService CategoriaService
+@inject ToastService ToastService
+
+<PageTitle>Categorias - Estúdio de Fotografia</PageTitle>
+
+<div class="page-container">
+    <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Categoria" Message="Tem certeza que deseja excluir esta categoria?" />
+
+    <div class="page-header">
+        <h1>Categorias de Ensaio</h1>
+        <p class="subtitle">Gerencie as categorias dos seus ensaios e organize seu portfólio</p>
+    </div>
+
+    <div class="actions-bar">
+        <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text"
+                   class="form-control"
+                   placeholder="Buscar por código ou descrição..."
+                   value="@filtroBusca"
+                   @oninput="OnFiltroChanged" />
+        </div>
+
+        <button class="btn btn-primary" @onclick="IrParaCriar">
+            <span>📁</span>
+            <span>Nova Categoria</span>
+        </button>
+    </div>
+
+    <div class="table-container">
+        @if (carregando)
+        {
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Acessando banco de dados...</p>
+            </div>
+        }
+        else if (categoriasFiltradas.Count == 0)
+        {
+            <div class="empty-state-container">
+                <div class="empty-state-content">
+                    <div class="empty-state-icon-wrapper">
+                        <span class="empty-state-icon">📁</span>
+                        <div class="empty-state-pulse"></div>
+                    </div>
+                    <h3>Nenhuma categoria encontrada</h3>
+                    <p>
+                        @(string.IsNullOrWhiteSpace(filtroBusca)
+                                            ? "Comece criando categorias como 'Gestante', 'Eventos' ou 'Newborn'."
+                                            : $"Não encontramos nada para \"{filtroBusca}\".")
+                </p>
+
+                @if (string.IsNullOrWhiteSpace(filtroBusca))
+                    {
+                        <button class="btn btn-primary" @onclick="IrParaCriar" style="margin-top: 20px;">
+                            <span>✚ Criar Primeira Categoria</span>
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn-outline" @onclick="LimparBusca" style="margin-top: 20px; cursor:pointer;">Limpar Filtros</button>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-scroll">
+                <table class="styled-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px; text-align: center;">Cor</th>
+                            <th style="width: 120px;">Código</th>
+                            <th>Descrição</th>
+                            <th style="width: 180px;">Criado em</th>
+                            <th style="width: 120px; text-align: center;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in categoriasFiltradas)
+                        {
+                            <tr>
+                                <td style="text-align: center;">
+                                    <div class="color-dot" style="background-color: @(string.IsNullOrEmpty(item.Cor) ? "#cbd5e0" : item.Cor)"
+                                         title="@item.Cor"></div>
+                                </td>
+                                <td>
+                                    <span class="codigo-badge">@item.Codigo</span>
+                                </td>
+                                <td class="descricao-cell">
+                                    <span class="descricao-texto">@item.Descricao</span>
+                                </td>
+                                <td class="data-cell">
+                                    <span class="data-info">@item.CriadoEm.ToString("dd/MM/yyyy HH:mm")</span>
+                                </td>
+                                <td>
+                                    <div class="actions-cell">
+                                        <button class="icon-btn edit" @onclick="() => Editar(item.Id)" title="Editar">
+                                            ✏️
+                                        </button>
+                                        <button class="icon-btn delete" @onclick="() => Excluir(item.Id)" title="Excluir">
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer">
+                Mostrando @categoriasFiltradas.Count de @categorias.Count categorias
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        height: 90vh;
+        display: flex;
+        flex-direction: column;
+        font-family: 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        color: #1a202c;
+        margin: 0;
+    }
+
+    .subtitle {
+        color: #718096;
+        margin-bottom: 20px;
+    }
+
+    .actions-bar {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        gap: 15px;
+    }
+
+    .search-box {
+        position: relative;
+        flex: 1;
+        max-width: 400px;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        color: #a0aec0;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px 10px 10px 35px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+    }
+
+    .table-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .table-scroll {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .styled-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .styled-table thead th {
+            background: #f8fafc;
+            padding: 15px;
+            text-align: left;
+            position: sticky;
+            top: 0;
+            color: #64748b;
+            border-bottom: 2px solid #edf2f7;
+        }
+
+        .styled-table td {
+            padding: 15px;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+    .color-dot {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #e2e8f0;
+        display: inline-block;
+    }
+
+    .codigo-badge {
+        background: #edf2f7;
+        color: #2d3748;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 0.85rem;
+    }
+
+    .btn-primary {
+        background: #6366f1;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .icon-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 5px;
+        border-radius: 4px;
+    }
+
+        .icon-btn:hover {
+            background: #f1f5f9;
+        }
+
+    .loading-container, .empty-state-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+    }
+
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .table-footer {
+        padding: 15px;
+        background: #f8fafc;
+        font-size: 0.85rem;
+        color: #64748b;
+        border-top: 1px solid #edf2f7;
+    }
+</style>
+
+@code {
+    private List<CategoriaModel> categorias = new();
+    private List<CategoriaModel> categoriasFiltradas = new();
+    private bool carregando = true;
+    private string filtroBusca = "";
+    private JanelaConfirmacao? janelaConfirmacao;
+    private int usuarioLogadoId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ObterUsuarioId();
+        await CarregarCategorias();
+    }
+
+    private async Task ObterUsuarioId()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity is { IsAuthenticated: true })
+        {
+            var claimId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            int.TryParse(claimId, out usuarioLogadoId);
+        }
+    }
+
+    private async Task CarregarCategorias()
+    {
+        if (usuarioLogadoId == 0) return;
+
+        carregando = true;
+        try
+        {
+            categorias = await CategoriaService.ListarPorUsuarioAsync(usuarioLogadoId);
+            AplicarFiltro();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao carregar: {ex.Message}");
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    private void AplicarFiltro()
+    {
+        if (string.IsNullOrWhiteSpace(filtroBusca))
+        {
+            categoriasFiltradas = categorias.ToList();
+        }
+        else
+        {
+            categoriasFiltradas = categorias
+                .Where(c => c.Codigo.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ||
+                            c.Descricao.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    private void OnFiltroChanged(ChangeEventArgs e)
+    {
+        filtroBusca = e.Value?.ToString() ?? "";
+        AplicarFiltro();
+    }
+
+    private void LimparBusca()
+    {
+        filtroBusca = string.Empty;
+        AplicarFiltro();
+    }
+
+    private async Task Excluir(int id)
+    {
+        if (janelaConfirmacao == null || !await janelaConfirmacao.Show()) return;
+
+        try
+        {
+            await CategoriaService.ExcluirAsync(id);
+            await CarregarCategorias();
+            ToastService.Success("Categoria excluída com sucesso.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao excluir: {ex.Message}");
+        }
+    }
+
+    private void IrParaCriar() => Navigation.NavigateTo("/categorias/criar");
+    private void Editar(int id) => Navigation.NavigateTo($"/categorias/editar/{id}");
+}

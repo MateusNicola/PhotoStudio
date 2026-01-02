@@ -1,0 +1,478 @@
+﻿@page "/categorias/editar/{Id:int}"
+@rendermode InteractiveServer
+@using PhotoStudio.app.Models
+@using PhotoStudio.app.Data
+@using PhotoStudio.app.Services
+@using Microsoft.EntityFrameworkCore
+@inject AppDbContext DbContext
+@inject CategoriaService CategoriaService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<PageTitle>Editar Categoria - Estúdio de Fotografia</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <div class="header-content">
+            <button class="btn-back" @onclick="Voltar" title="Voltar">
+                <span>←</span>
+            </button>
+            <div>
+                <h1>Editar Categoria</h1>
+                <p class="subtitle">Atualize as informações da categoria</p>
+            </div>
+        </div>
+    </div>
+
+    @if (carregando)
+    {
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Carregando dados da categoria...</p>
+        </div>
+    }
+    else if (categoria == null)
+    {
+        <div class="error-container">
+            <div class="error-icon">⚠️</div>
+            <h3>Categoria não encontrada</h3>
+            <p>A categoria que você está tentando editar não existe.</p>
+            <button class="btn btn-primary" @onclick="Voltar">
+                Voltar para Categorias
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="form-container">
+            <EditForm Model="@categoria" OnValidSubmit="Salvar">
+                <DataAnnotationsValidator />
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="codigo">Código *</label>
+                        <InputText id="codigo" class="form-control" @bind-Value="categoria.Codigo"
+                                   placeholder="Ex: CASA" maxlength="5"
+                                   style="text-transform: uppercase;" />
+                        <ValidationMessage For="@(() => categoria.Codigo)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cor">Cor de Identificação *</label>
+                        <div class="color-picker-wrapper">
+                            <InputText type="color" id="cor" class="form-control color-input" @bind-Value="categoria.Cor" />
+                            <span class="color-hex">@categoria.Cor</span>
+                        </div>
+                        <ValidationMessage For="@(() => categoria.Cor)" />
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="descricao">Descrição *</label>
+                        <InputText id="descricao" class="form-control" @bind-Value="categoria.Descricao"
+                                   placeholder="Ex: Ensaio de Casamento" maxlength="250" />
+                        <ValidationMessage For="@(() => categoria.Descricao)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Data de Criação</label>
+                        <input type="text" class="form-control"
+                               value="@(categoria.CriadoEm.ToString("dd/MM/yyyy HH:mm"))"
+                               readonly disabled />
+                        <small class="field-hint">Campo não editável</small>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" @onclick="Voltar" disabled="@salvando">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" disabled="@salvando">
+                        @if (salvando)
+                        {
+                            <span class="spinner"></span>
+                            <span>Salvando...</span>
+                        }
+                        else
+                        {
+                            <span>💾 Salvar Alterações</span>
+                        }
+                    </button>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+<style>
+    .page-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .btn-back {
+        background: #f7fafc;
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        width: 48px;
+        height: 48px;
+        font-size: 1.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #4a5568;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+        .btn-back:hover {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+            transform: translateX(-4px);
+        }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin: 0 0 8px 0;
+    }
+
+    .subtitle {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .form-container {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+    label {
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 8px;
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        padding: 12px 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.2s;
+        background: white;
+        color: #2d3748;
+    }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-control:disabled {
+            background: #f7fafc;
+            color: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .form-control::placeholder {
+            color: #a0aec0;
+        }
+
+    .field-hint {
+        color: #718096;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    .validation-message {
+        color: #e53e3e;
+        font-size: 0.85rem;
+        margin-top: 6px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 12px 32px;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .btn-secondary {
+        background: #f7fafc;
+        color: #4a5568;
+        border: 2px solid #e2e8f0;
+    }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #edf2f7;
+            border-color: #cbd5e0;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @@keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .loading-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .loading-spinner {
+        width: 48px;
+        height: 48px;
+        border: 4px solid #e2e8f0;
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    .loading-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .error-container {
+        background: white;
+        border-radius: 12px;
+        padding: 60px 32px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .error-icon {
+        font-size: 4rem;
+        margin-bottom: 16px;
+    }
+
+    .error-container h3 {
+        color: #2d3748;
+        font-size: 1.8rem;
+        margin: 0 0 12px 0;
+    }
+
+    .error-container p {
+        color: #718096;
+        font-size: 1.1rem;
+        margin: 0 0 24px 0;
+    }
+
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group.full-width {
+            grid-column: 1;
+        }
+
+        .form-actions {
+            flex-direction: column-reverse;
+        }
+
+        .btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .header-content {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-back {
+            align-self: flex-start;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+        }
+    }
+
+    .color-picker-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #f8fafc;
+        padding: 4px 12px;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+    }
+
+    .color-input {
+        width: 50px;
+        height: 40px;
+        padding: 2px;
+        border: none;
+        cursor: pointer;
+        background: transparent;
+    }
+
+    .color-hex {
+        font-family: monospace;
+        font-weight: 700;
+        color: #4a5568;
+        text-transform: uppercase;
+    }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private CategoriaModel? categoria;
+    private bool carregando = true;
+    private bool salvando = false;
+    private string codigoOriginal = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CarregarCategoria();
+    }
+
+    private async Task CarregarCategoria()
+    {
+        carregando = true;
+        try
+        {
+            categoria = await CategoriaService.ObterPorIdAsync(Id);
+
+            if (categoria != null)
+            {
+                codigoOriginal = categoria.Codigo;
+
+                // Correção preventiva para o erro "Data is Null"
+                // Se a cor vier nula do banco, definimos uma cor padrão
+                if (string.IsNullOrEmpty(categoria.Cor))
+                {
+                    categoria.Cor = "#6366f1";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao carregar: {ex.Message}");
+        }
+        finally
+        {
+            carregando = false;
+        }
+    }
+
+    private async Task Salvar()
+    {
+        if (categoria == null) return;
+
+        salvando = true;
+        try
+        {
+            categoria.Codigo = categoria.Codigo?.ToUpper().Trim() ?? "";
+            categoria.Descricao = categoria.Descricao?.Trim() ?? "";
+
+            // Verifica duplicidade se o código mudou
+            if (categoria.Codigo != codigoOriginal)
+            {
+                var todas = await CategoriaService.ListarTodasAsync();
+                if (todas.Any(c => c.Codigo == categoria.Codigo && c.Id != Id))
+                {
+                    ToastService.Error("Já existe uma categoria com este código!");
+                    return;
+                }
+            }
+
+            await CategoriaService.AtualizarAsync(categoria);
+            ToastService.Success("Categoria atualizada!");
+            await Task.Delay(500);
+            Navigation.NavigateTo("/categorias");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Erro ao salvar: {ex.Message}");
+        }
+        finally
+        {
+            salvando = false;
+        }
+    }
+
+    private void Voltar() => Navigation.NavigateTo("/categorias");
+}
