@@ -10,123 +10,121 @@
 @inject ToastService ToastService
 @attribute [Authorize]
 
-<PageTitle>Clientes - Estúdio de Fotografia</PageTitle>
+<PageTitle>Clientes | Photo Studio</PageTitle>
 
-<div class="page-container">
+<div class="page-container fade-in">
     <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Cliente" Message="Tem certeza que deseja excluir este cliente?" />
 
     <div class="page-header">
-        <h1>Clientes</h1>
-        <p class="subtitle">Gerencie seus clientes cadastrados</p>
-    </div>
-
-    <div class="actions-bar">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text"
-                   class="form-control"
-                   placeholder="Buscar por nome ou email..."
-                   @bind="filtroBusca"
-                   @bind:event="oninput" />
+        <div class="header-content">
+            <h1 class="page-title">Meus Clientes</h1>
+            <p class="page-subtitle">Gerencie sua base de contatos e mantenha o histórico atualizado.</p>
         </div>
 
-        <button class="btn btn-primary" @onclick="CriarCliente">
-            ✚ Novo Cliente
+        <button class="btn-modern btn-gradient" @onclick="CriarCliente">
+            <span class="icon">✚</span>
+            <span>Novo Cliente</span>
         </button>
     </div>
 
-    <div class="table-container">
+    <div class="toolbar">
+        <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text"
+                   class="search-input"
+                   placeholder="Buscar por nome, email ou telefone..."
+                   @bind="filtroBusca"
+                   @bind:event="oninput" />
+            @if (!string.IsNullOrEmpty(filtroBusca))
+            {
+                <button class="btn-clear" @onclick="() => filtroBusca = string.Empty">✕</button>
+            }
+        </div>
+        <div class="stats-badge">
+            <span class="badge-label">Total</span>
+            <span class="badge-value">@clientesFiltrados.Count</span>
+        </div>
+    </div>
+
+    <div class="content-card">
         @if (carregando)
         {
-            <div class="loading-container">
-                <div class="loading-spinner"></div>
-                <p>Carregando clientes...</p>
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Carregando sua lista de clientes...</p>
             </div>
         }
         else if (clientesFiltrados.Count == 0)
         {
-            <div class="empty-state-container">
-                <div class="empty-state-content">
-                    <div class="empty-state-icon-wrapper">
-                        <span class="empty-state-icon">👥</span>
-                        <div class="empty-state-pulse"></div>
-                    </div>
-                    <h3>Nenhum cliente por aqui</h3>
-                    <p>
-                        @(string.IsNullOrWhiteSpace(filtroBusca)
-                                            ? "Sua lista de contatos está vazia. Comece cadastrando seu primeiro cliente para gerenciar seus ensaios."
-                                            : $"Não encontramos resultados para \"{filtroBusca}\". Tente ajustar sua busca.")
-                </p>
+            <div class="empty-state">
+                <div class="empty-icon-bg">👥</div>
+                <h3>Nenhum cliente encontrado</h3>
+                <p>
+                    @(string.IsNullOrWhiteSpace(filtroBusca)
+                                    ? "Sua base de dados ainda está vazia. Que tal cadastrar o primeiro?"
+                                    : $"Não encontramos resultados para \"{filtroBusca}\".")
+            </p>
 
-                @if (string.IsNullOrWhiteSpace(filtroBusca))
-                    {
-                        <button class="btn btn-primary btn-lg" @onclick="CriarCliente">
-                            <span>✚ Cadastrar Meu Primeiro Cliente</span>
-                        </button>
-                    }
-                    else
-                    {
-                        <button class="btn-outline" @onclick="() => { filtroBusca = string.Empty; }">
-                            Limpar Busca
-                        </button>
-                    }
-                </div>
+            @if (string.IsNullOrWhiteSpace(filtroBusca))
+                {
+                    <button class="btn-modern btn-outline" @onclick="CriarCliente">Cadastrar Cliente</button>
+                }
+                else
+                {
+                    <button class="btn-modern btn-text" @onclick="() => filtroBusca = string.Empty">Limpar filtros</button>
+                }
             </div>
         }
         else
         {
-            <div class="table-scroll">
-                <table class="styled-table">
+            <div class="table-responsive">
+                <table class="modern-table">
                     <thead>
                         <tr>
-                            <th style="width: 30%;">Informações Pessoais</th>
-                            <th style="width: 20%;">Contato</th>
-                            <th style="width: 40%;">Endereço</th>
-                            <th style="width: 10%; text-align: center;">País</th>
+                            <th width="35%">Cliente</th>
+                            <th width="25%">Contato</th>
+                            <th width="30%" class="hide-mobile">Localização</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var c in clientesPaginados)
                         {
-                            <tr @onclick="() => Editar(c.Id)" style="cursor: pointer;">
+                            <tr @onclick="() => Editar(c.Id)" class="clickable-row">
                                 <td>
-                                    <div class="info-pessoal">
-                                        <div class="nome-row">
-                                            <span class="avatar-icon">👤</span>
-                                            <span class="nome-principal" title="@c.Nome">@c.Nome</span>
+                                    <div class="user-profile">
+                                        <div class="avatar-circle">
+                                            @ObterIniciais(c.Nome)
+                                        </div>
+                                        <div class="user-info">
+                                            <span class="user-name">@c.Nome</span>
+                                            <span class="user-id">ID: #@c.Id</span>
                                         </div>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="contato-cell">
-                                        <div class="contato-item">
-                                            <span class="contato-icon">📞</span>
-                                            <span class="contato-texto">@c.Telefone</span>
+                                    <div class="contact-info">
+                                        <div class="contact-item">
+                                            <span class="c-icon">📧</span>
+                                            <span class="c-text" title="@c.Email">@c.Email</span>
                                         </div>
-                                        <div class="contato-item">
-                                            <span class="contato-icon">✉️</span>
-                                            <span class="contato-texto email-texto" title="@c.Email">@c.Email</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="endereco-info">
-                                        <span class="endereco-icon">📍</span>
-                                        <div class="endereco-detalhado">
-                                            @if (!string.IsNullOrEmpty(c.CEP))
-                                            {
-                                                <span class="cep-tag">@c.CEP</span>
-                                            }
-                                            <span class="endereco-texto">
-                                                @($"{c.Logradouro}{(string.IsNullOrEmpty(c.Numero) ? "" : ", " + c.Numero)}")
-                                                @($"{(string.IsNullOrEmpty(c.Bairro) ? "" : " - " + c.Bairro)}")
-                                                @($"{(string.IsNullOrEmpty(c.Cidade) ? "" : " | " + c.Cidade + "/" + c.Estado)}")
-                                            </span>
+                                        <div class="contact-item">
+                                            <span class="c-icon">📱</span>
+                                            <span class="c-text">@c.Telefone</span>
                                         </div>
                                     </div>
                                 </td>
-                                <td style="text-align: center;">
-                                    <span class="pais-texto">@(string.IsNullOrEmpty(c.Pais) ? "Brasil" : c.Pais)</span>
+                                <td class="hide-mobile">
+                                    <div class="address-info">
+                                        @if (!string.IsNullOrEmpty(c.Cidade))
+                                        {
+                                            <span class="location-text">@c.Cidade, @c.Estado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="location-empty">-</span>
+                                        }
+                                        <small class="country-tag">@(string.IsNullOrEmpty(c.Pais) ? "Brasil" : c.Pais)</small>
+                                    </div>
                                 </td>
                             </tr>
                         }
@@ -134,357 +132,511 @@
                 </table>
             </div>
 
-            <footer class="pagination-container">
-                <div class="pagination-info">Mostrando @clientesPaginados.Count() de @clientesFiltrados.Count clientes</div>
+            <div class="table-footer">
+                <span class="footer-info">Página @paginaAtual de @totalPaginas</span>
+
                 <div class="pagination-controls">
-                    <button class="btn-pager" disabled="@(paginaAtual == 1)" @onclick="() => MudarPagina(paginaAtual - 1)">
-                        <span class="pager-icon">❮</span>
-                        <span class="pager-text">Anterior</span>
+                    <button class="btn-page-nav" disabled="@(paginaAtual == 1)" @onclick="() => MudarPagina(paginaAtual - 1)">
+                        ❮
                     </button>
 
-                    <div class="pager-numbers">
+                    <div class="page-numbers">
                         @for (int i = 1; i <= totalPaginas; i++)
                         {
-                            var p = i;
-                            <button class="btn-number @(p == paginaAtual ? "active" : "")" @onclick="() => MudarPagina(p)">
-                                @p
-                            </button>
+                            // Lógica simples para não mostrar 100 botões se tiver muitas páginas
+                            if (i == 1 || i == totalPaginas || (i >= paginaAtual - 1 && i <= paginaAtual + 1))
+                            {
+                                var p = i;
+                                <button class="btn-page-number @(p == paginaAtual ? "active" : "")" @onclick="() => MudarPagina(p)">
+                                    @p
+                                </button>
+                            }
+                            else if (i == paginaAtual - 2 || i == paginaAtual + 2)
+                            {
+                                <span class="page-dots">...</span>
+                            }
                         }
                     </div>
 
-                    <button class="btn-pager" disabled="@(paginaAtual >= totalPaginas)" @onclick="() => MudarPagina(paginaAtual + 1)">
-                        <span class="pager-text">Próximo</span>
-                        <span class="pager-icon">❯</span>
+                    <button class="btn-page-nav" disabled="@(paginaAtual >= totalPaginas)" @onclick="() => MudarPagina(paginaAtual + 1)">
+                        ❯
                     </button>
                 </div>
-            </footer>
+            </div>
         }
     </div>
 </div>
 
 <style>
-    /* Container de Estado Vazio */
-    .empty-state-container {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 60px 20px;
-        text-align: center;
-        background: white;
+    :root {
+        --bg-color: #f8f9fc;
+        --card-bg: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        --hover-bg: #f1f5f9;
+        --border-color: #e2e8f0;
     }
 
-    .empty-state-content {
-        max-width: 400px;
+    /* Layout Principal */
+    .page-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        min-height: 100vh;
     }
 
-    .empty-state-icon-wrapper {
-        position: relative;
-        width: 80px;
-        height: 80px;
-        margin: 0 auto 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f1f5f9;
-        border-radius: 50%;
+    .fade-in {
+        animation: fadeIn 0.4s ease-out;
     }
 
-    .empty-state-icon {
-        font-size: 40px;
-        z-index: 2;
-    }
-
-    .empty-state-pulse {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        background: #6366f1;
-        opacity: 0.15;
-        animation: pulse-animation 2s infinite;
-    }
-
-    @@keyframes pulse-animation {
-        0%
+    @@keyframes fadeIn {
+        from
 
     {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+        opacity: 0;
+        transform: translateY(10px);
     }
 
-    70% {
-        transform: scale(1);
-        box-shadow: 0 0 0 15px rgba(99, 102, 241, 0);
-    }
-
-    100% {
-        transform: scale(0.95);
-        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 
     }
 
-    .empty-state-content h3 {
-        font-size: 1.5rem;
-        color: #1a202c;
-        margin-bottom: 12px;
-        font-weight: 700;
+    /* Header */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
-    .empty-state-content p {
-        color: #718096;
-        line-height: 1.6;
-        margin-bottom: 24px;
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin: 0;
+        letter-spacing: -0.02em;
     }
 
-    .btn-lg {
-        padding: 14px 28px;
-        font-size: 1rem;
-        box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.3);
+    .page-subtitle {
+        color: var(--text-secondary);
+        margin: 0.25rem 0 0 0;
+        font-size: 0.95rem;
+    }
+
+    /* Botões Modernos */
+    .btn-modern {
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+
+        .btn-modern:hover {
+            transform: translateY(-2px);
+        }
+
+    .btn-gradient {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
 
     .btn-outline {
-        background: transparent;
-        border: 2px solid #e2e8f0;
-        color: #4a5568;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
+        background: white;
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
     }
 
         .btn-outline:hover {
-            background: #f8fafc;
-            border-color: #cbd5e0;
+            background: var(--hover-bg);
         }
 
-    .page-container {
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        padding: 24px;
-        overflow: hidden;
-        background-color: #f8fafc;
-        box-sizing: border-box;
+    .btn-text {
+        background: none;
+        color: #6366f1;
     }
 
-    .page-header {
-        margin-bottom: 20px;
-        flex-shrink: 0;
-    }
-
-        .page-header h1 {
-            font-size: 2.2rem;
-            margin: 0;
-            color: #1a202c;
+        .btn-text:hover {
+            text-decoration: underline;
         }
 
-    .subtitle {
-        color: #718096;
-        margin: 5px 0 0;
-    }
-
-
-    .actions-bar {
+    /* Toolbar e Busca */
+    .toolbar {
         display: flex;
         justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 20px;
-        flex-shrink: 0;
-    }
-
-    .filters-group {
-        display: flex;
-        gap: 12px;
         align-items: center;
+        margin-bottom: 1.5rem;
+        gap: 1rem;
     }
 
-    .search-box {
+    .search-wrapper {
         position: relative;
+        flex: 1;
+        max-width: 400px;
     }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 40px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: white;
+        font-size: 0.95rem;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
 
     .search-icon {
         position: absolute;
         left: 12px;
         top: 50%;
         transform: translateY(-50%);
-        color: #a0aec0;
-        z-index: 1;
+        color: #94a3b8;
     }
 
-    .form-control {
-        padding: 10px 14px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background: white;
-        font-size: 0.95rem;
-    }
-
-    .search-box .form-control {
-        padding-left: 35px;
-        min-width: 250px;
-    }
-
-    .btn-primary {
-        background: #6366f1;
-        color: white;
+    .btn-clear {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
         border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 600;
+        color: #94a3b8;
         cursor: pointer;
-        transition: opacity 0.2s;
+        font-size: 0.8rem;
     }
 
-    .table-container {
-        flex: 1;
+    .stats-badge {
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .badge-value {
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    /* Card de Conteúdo e Tabela */
+    .content-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
         display: flex;
         flex-direction: column;
-        min-height: 0;
+        min-height: 400px;
     }
 
-    .table-scroll {
-        flex: 1;
-        overflow-y: auto;
-        overflow-x: auto;
-    }
-
-    .styled-table {
+    .modern-table {
         width: 100%;
         border-collapse: collapse;
     }
 
-        .styled-table thead th {
-            position: sticky;
-            top: 0;
+        .modern-table thead th {
             background: #f8fafc;
-            padding: 16px;
+            padding: 16px 24px;
             text-align: left;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
+            font-weight: 700;
             text-transform: uppercase;
-            color: #64748b;
-            border-bottom: 1px solid #e2e8f0;
+            color: var(--text-secondary);
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .styled-table tbody td {
-            padding: 16px;
-            border-bottom: 1px solid #f1f5f9;
-            cursor: pointer;
+    .clickable-row {
+        cursor: pointer;
+        transition: background 0.1s;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+        .clickable-row:hover {
+            background-color: #f8fafc;
         }
 
-        .styled-table tr:hover {
-            background: #f8fafc;
+        .clickable-row td {
+            padding: 16px 24px;
+            vertical-align: middle;
         }
 
-
-    .pagination-container {
-        padding: 16px;
-        border-top: 1px solid #e2e8f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-shrink: 0;
-    }
-
-
-    .info-cell {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .sub-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .tipo-badge, .situacao-badge {
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        color: white;
-        font-weight: 600;
-    }
-
-    .pagination-controls {
+    /* User Profile Cell */
+    .user-profile {
         display: flex;
         align-items: center;
         gap: 12px;
     }
 
-    .btn-pager {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background-color: white;
-        color: #4a5568;
-        font-weight: 500;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-        .btn-pager:hover:not(:disabled) {
-            background-color: #f7fafc;
-            border-color: #cbd5e0;
-            color: #2d3748;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .btn-pager:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            background-color: #f1f5f9;
-        }
-
-    .pager-numbers {
-        display: flex;
-        gap: 4px;
-    }
-
-    .btn-number {
-        width: 36px;
-        height: 36px;
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        color: #4338ca;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        background: transparent;
-        color: #64748b;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-name {
         font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+    }
+
+    .user-id {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    /* Contact Cell */
+    .contact-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .c-icon {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+
+    /* Address Cell */
+    .address-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .location-text {
+        font-size: 0.9rem;
+        color: var(--text-primary);
+    }
+
+    .country-tag {
+        background: #f1f5f9;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #64748b;
+    }
+
+    .btn-icon-action {
+        background: transparent;
+        border: none;
         cursor: pointer;
+        opacity: 0.5;
+        transition: opacity 0.2s;
+        padding: 8px;
+        border-radius: 8px;
+    }
+
+    .clickable-row:hover .btn-icon-action {
+        opacity: 1;
+    }
+
+    .btn-icon-action:hover {
+        background: #e0e7ff;
+    }
+
+    /* Empty State */
+    .empty-state {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 4rem 2rem;
+        text-align: center;
+    }
+
+    .empty-icon-bg {
+        width: 80px;
+        height: 80px;
+        background: #f1f5f9;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.5rem;
+        margin-bottom: 1.5rem;
+        color: #94a3b8;
+    }
+
+    .empty-state h3 {
+        margin: 0 0 0.5rem 0;
+        color: var(--text-primary);
+    }
+
+    .empty-state p {
+        color: var(--text-secondary);
+        max-width: 400px;
+        margin-bottom: 1.5rem;
+    }
+
+    /* Loading */
+    .loading-state {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 3rem;
+        color: var(--text-secondary);
+    }
+
+    .spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+    }
+    @@keyframes spin {
+        to
+
+    {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    /* Rodapé e Paginação */
+    .table-footer {
+        padding: 16px 24px;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fcfcfd;
+    }
+
+    .footer-info {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+    }
+
+    .pagination-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-page-nav, .btn-page-number {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border-color);
+        background: white;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
         transition: all 0.2s;
     }
 
-        .btn-number:hover:not(.active) {
-            background-color: #edf2f7;
-            color: #2d3748;
+        .btn-page-number:hover:not(.active) {
+            background: #f1f5f9;
+            color: var(--text-primary);
         }
 
-        .btn-number.active {
-            background-color: #6366f1;
+        .btn-page-number.active {
+            background: #6366f1;
             color: white;
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
+            border-color: #6366f1;
+            box-shadow: 0 2px 4px rgba(99,102,241,0.3);
         }
 
-    @@media (max-width: 600px) {
-        .pager-text {
-            display: none;
+        .btn-page-nav:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: #f8fafc;
         }
 
-        .btn-pager {
-            padding: 8px 12px;
-        }
+    /* Responsivo */
+    @@media (max-width: 768px) {
+        .page-header
+
+    {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .page-header button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .hide-mobile {
+        display: none;
+    }
+
+    .table-footer {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .search-wrapper {
+        max-width: 100%;
+    }
+
+    .content-card {
+        border-radius: 12px;
+    }
+
     }
 </style>
 
@@ -497,7 +649,7 @@
 
     // PAGINAÇÃO
     private int paginaAtual = 1;
-    private int itensPorPagina = 5; // Você pode ajustar este número
+    private int itensPorPagina = 8; // Aumentei um pouco para telas modernas
     private int totalPaginas => (int)Math.Ceiling((double)clientesFiltrados.Count / itensPorPagina);
     private IEnumerable<ClienteModel> clientesPaginados => clientesFiltrados.Skip((paginaAtual - 1) * itensPorPagina).Take(itensPorPagina);
 
@@ -534,7 +686,7 @@
 
     private void AplicarFiltro()
     {
-        paginaAtual = 1; // Sempre volta para a página 1 ao filtrar
+        paginaAtual = 1;
         if (string.IsNullOrWhiteSpace(filtroBusca))
         {
             clientesFiltrados = clientes.ToList();
@@ -544,11 +696,21 @@
             clientesFiltrados = clientes
                 .Where(c =>
                     (c.Nome?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                    (c.Email?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false))
+                    (c.Email?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (c.Telefone?.Contains(filtroBusca, StringComparison.OrdinalIgnoreCase) ?? false))
                 .ToList();
         }
     }
 
     private void CriarCliente() => Navigation.NavigateTo("/clientes/criarCliente");
     private void Editar(int id) => Navigation.NavigateTo($"/clientes/editarCliente/{id}");
+
+    // Helper para avatar
+    private string ObterIniciais(string? nome)
+    {
+        if (string.IsNullOrEmpty(nome)) return "?";
+        var partes = nome.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (partes.Length == 1) return partes[0].Substring(0, 1).ToUpper();
+        return (partes[0].Substring(0, 1) + partes.Last().Substring(0, 1)).ToUpper();
+    }
 }

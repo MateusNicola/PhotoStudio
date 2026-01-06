@@ -11,105 +11,115 @@
 @inject CategoriaService CategoriaService
 @inject ToastService ToastService
 
-<PageTitle>Categorias - Estúdio de Fotografia</PageTitle>
+<PageTitle>Categorias | Photo Studio</PageTitle>
 
-<div class="page-container">
-    <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Categoria" Message="Tem certeza que deseja excluir esta categoria?" />
+<div class="page-container fade-in">
+    <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Categoria" Message="Tem certeza que deseja excluir esta categoria? Isso pode afetar ensaios vinculados." />
 
     <div class="page-header">
-        <h1>Categorias de Ensaio</h1>
-        <p class="subtitle">Gerencie as categorias dos seus ensaios e organize seu portfólio</p>
-    </div>
-
-    <div class="actions-bar">
-        <div class="search-box">
-            <span class="search-icon">🔍</span>
-            <input type="text"
-                   class="form-control"
-                   placeholder="Buscar por código ou descrição..."
-                   value="@filtroBusca"
-                   @oninput="OnFiltroChanged" />
+        <div class="header-content">
+            <h1 class="page-title">Categorias de Ensaio</h1>
+            <p class="page-subtitle">Organize seu portfólio e facilite a gestão dos seus diferentes nichos fotográficos.</p>
         </div>
 
-        <button class="btn btn-primary" @onclick="IrParaCriar">
-            <span>📁</span>
+        <button class="btn-modern btn-gradient" @onclick="IrParaCriar">
+            <span class="icon">📁</span>
             <span>Nova Categoria</span>
         </button>
     </div>
 
-    <div class="table-container">
+    <div class="toolbar">
+        <div class="filters-container">
+            <div class="search-wrapper">
+                <span class="search-icon">🔍</span>
+                <input type="text"
+                       class="search-input"
+                       placeholder="Buscar por código ou descrição..."
+                       value="@filtroBusca"
+                       @oninput="OnFiltroChanged" />
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(filtroBusca))
+            {
+                <button class="btn-clear-filters" @onclick="LimparBusca">
+                    Limpar Busca ✕
+                </button>
+            }
+        </div>
+
+        <div class="stats-badge">
+            <span class="badge-label">Total</span>
+            <span class="badge-value">@categoriasFiltradas.Count</span>
+        </div>
+    </div>
+
+    <div class="content-card">
         @if (carregando)
         {
-            <div class="loading-container">
-                <div class="loading-spinner"></div>
+            <div class="loading-state">
+                <div class="spinner"></div>
                 <p>Acessando banco de dados...</p>
             </div>
         }
         else if (categoriasFiltradas.Count == 0)
         {
-            <div class="empty-state-container">
-                <div class="empty-state-content">
-                    <div class="empty-state-icon-wrapper">
-                        <span class="empty-state-icon">📁</span>
-                        <div class="empty-state-pulse"></div>
-                    </div>
-                    <h3>Nenhuma categoria encontrada</h3>
-                    <p>
-                        @(string.IsNullOrWhiteSpace(filtroBusca)
-                                            ? "Comece criando categorias como 'Gestante', 'Eventos' ou 'Newborn'."
-                                            : $"Não encontramos nada para \"{filtroBusca}\".")
-                </p>
-
-                @if (string.IsNullOrWhiteSpace(filtroBusca))
-                    {
-                        <button class="btn btn-primary" @onclick="IrParaCriar" style="margin-top: 20px;">
-                            <span>✚ Criar Primeira Categoria</span>
-                        </button>
-                    }
-                    else
-                    {
-                        <button class="btn-outline" @onclick="LimparBusca" style="margin-top: 20px; cursor:pointer;">Limpar Filtros</button>
-                    }
-                </div>
-            </div>
-        }
+            <div class="empty-state">
+                <div class="empty-icon-bg">📂</div>
+                <h3>Nenhuma categoria encontrada</h3>
+                <p>
+                    @(string.IsNullOrWhiteSpace(filtroBusca)
+                                    ? "Sua lista está vazia. Crie categorias como 'Gestante' ou 'Eventos' para começar."
+                                    : $"Não encontramos resultados para \"{filtroBusca}\".")
+            </p>
+            <button class="btn-modern @(string.IsNullOrWhiteSpace(filtroBusca) ? "btn-gradient" : "btn-outline")"
+                    @onclick="@(string.IsNullOrWhiteSpace(filtroBusca) ? IrParaCriar : LimparBusca)">
+                @(string.IsNullOrWhiteSpace(filtroBusca) ? "Criar Primeira Categoria" : "Limpar Filtros")
+            </button>
+        </div>
+                }
         else
         {
-            <div class="table-scroll">
-                <table class="styled-table">
+            <div class="table-responsive">
+                <table class="modern-table">
                     <thead>
                         <tr>
-                            <th style="width: 70px; text-align: center;">Cor</th>
-                            <th style="width: 120px;">Código</th>
-                            <th>Descrição</th>
-                            <th style="width: 180px;">Criado em</th>
-                            <th style="width: 120px; text-align: center;">Ações</th>
+                            <th width="80px" style="text-align: center;">Identidade</th>
+                            <th width="150px">Código</th>
+                            <th>Descrição da Categoria</th>
+                            <th width="200px" class="hide-mobile">Data de Criação</th>
+                            <th width="120px" style="text-align: center;">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in categoriasFiltradas)
                         {
-                            <tr>
+                            <tr class="clickable-row">
                                 <td style="text-align: center;">
-                                    <div class="color-dot" style="background-color: @(string.IsNullOrEmpty(item.Cor) ? "#cbd5e0" : item.Cor)"
-                                         title="@item.Cor"></div>
+                                    <div class="color-preview-container">
+                                        <div class="color-dot-large"
+                                             style="background-color: @(string.IsNullOrEmpty(item.Cor) ? "#cbd5e0" : item.Cor)">
+                                        </div>
+                                    </div>
                                 </td>
                                 <td>
-                                    <span class="codigo-badge">@item.Codigo</span>
+                                    <span class="code-pill">@item.Codigo</span>
                                 </td>
-                                <td class="descricao-cell">
-                                    <span class="descricao-texto">@item.Descricao</span>
+                                <td>
+                                    <span class="main-text">@item.Descricao</span>
                                 </td>
-                                <td class="data-cell">
-                                    <span class="data-info">@item.CriadoEm.ToString("dd/MM/yyyy HH:mm")</span>
+                                <td class="hide-mobile">
+                                    <div class="date-info">
+                                        <span class="d-date">@item.CriadoEm.ToString("dd/MM/yyyy")</span>
+                                        <span class="d-time">@item.CriadoEm.ToString("HH:mm")</span>
+                                    </div>
                                 </td>
                                 <td>
                                     <div class="actions-cell">
-                                        <button class="icon-btn edit" @onclick="() => Editar(item.Id)" title="Editar">
-                                            ✏️
+                                        <button class="btn-action edit" @onclick="() => Editar(item.Id)" title="Editar">
+                                            <span>✏️</span>
                                         </button>
-                                        <button class="icon-btn delete" @onclick="() => Excluir(item.Id)" title="Excluir">
-                                            🗑️
+                                        <button class="btn-action delete" @onclick="() => Excluir(item.Id)" title="Excluir">
+                                            <span>🗑️</span>
                                         </button>
                                     </div>
                                 </td>
@@ -120,172 +130,375 @@
             </div>
 
             <div class="table-footer">
-                Mostrando @categoriasFiltradas.Count de @categorias.Count categorias
+                <span class="footer-info">Mostrando @categoriasFiltradas.Count de @categorias.Count categorias registradas</span>
             </div>
         }
     </div>
 </div>
 
 <style>
+    :root {
+        --primary: #6366f1;
+        --primary-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --bg-body: #f8fafc;
+        --border-color: #e2e8f0;
+        --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+
     .page-container {
         max-width: 1200px;
         margin: 0 auto;
-        padding: 20px;
-        height: 90vh;
-        display: flex;
-        flex-direction: column;
-        font-family: 'Segoe UI', Roboto, sans-serif;
+        padding: 2rem;
+        background-color: var(--bg-body);
+        min-height: 100vh;
     }
 
-    .page-header h1 {
-        font-size: 2rem;
-        color: #1a202c;
-        margin: 0;
+    .fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(8px);
     }
 
-    .subtitle {
-        color: #718096;
-        margin-bottom: 20px;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 
-    .actions-bar {
+    }
+
+    /* Header */
+    .page-header {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 20px;
-        gap: 15px;
+        align-items: center;
+        margin-bottom: 2.5rem;
     }
 
-    .search-box {
-        position: relative;
-        flex: 1;
-        max-width: 400px;
+    .page-title {
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: var(--text-main);
+        margin: 0;
+        letter-spacing: -0.025em;
     }
+
+    .page-subtitle {
+        color: var(--text-muted);
+        margin-top: 0.4rem;
+        font-size: 1rem;
+    }
+
+    /* Toolbar */
+    .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        gap: 1rem;
+    }
+
+    .filters-container {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex: 1;
+    }
+
+    .search-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 380px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 12px 12px 42px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        background: white;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            outline: none;
+        }
 
     .search-icon {
         position: absolute;
-        left: 12px;
-        top: 12px;
-        color: #a0aec0;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 0.9rem;
     }
 
-    .form-control {
-        width: 100%;
-        padding: 10px 10px 10px 35px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-    }
-
-    .table-container {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-    }
-
-    .table-scroll {
-        flex: 1;
-        overflow-y: auto;
-    }
-
-    .styled-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-        .styled-table thead th {
-            background: #f8fafc;
-            padding: 15px;
-            text-align: left;
-            position: sticky;
-            top: 0;
-            color: #64748b;
-            border-bottom: 2px solid #edf2f7;
-        }
-
-        .styled-table td {
-            padding: 15px;
-            border-bottom: 1px solid #edf2f7;
-        }
-
-    .color-dot {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 2px solid #fff;
-        box-shadow: 0 0 0 1px #e2e8f0;
-        display: inline-block;
-    }
-
-    .codigo-badge {
-        background: #edf2f7;
-        color: #2d3748;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-weight: bold;
-        font-size: 0.85rem;
-    }
-
-    .btn-primary {
-        background: #6366f1;
-        color: white;
+    .btn-clear-filters {
+        background: none;
         border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
+        color: #f43f5e;
+        font-size: 0.85rem;
         font-weight: 600;
         cursor: pointer;
     }
 
-    .icon-btn {
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        font-size: 1.1rem;
-        padding: 5px;
-        border-radius: 4px;
+    /* Stats Badge */
+    .stats-badge {
+        background: white;
+        padding: 6px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        gap: 8px;
+        font-size: 0.85rem;
     }
 
-        .icon-btn:hover {
-            background: #f1f5f9;
+    .badge-label {
+        color: var(--text-muted);
+    }
+
+    .badge-value {
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    /* Card & Table */
+    .content-card {
+        background: white;
+        border-radius: 18px;
+        box-shadow: var(--shadow-md);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .modern-table thead th {
+            background: #fcfcfd;
+            padding: 16px 24px;
+            text-align: left;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
         }
 
-    .loading-container, .empty-state-container {
-        flex: 1;
+        .modern-table tbody tr {
+            transition: background 0.2s;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+            .modern-table tbody tr:hover {
+                background-color: #f8fafc;
+            }
+
+        .modern-table td {
+            padding: 16px 24px;
+            vertical-align: middle;
+        }
+
+    /* Custom Table Cells */
+    .color-dot-large {
+        width: 24px;
+        height: 24px;
+        border-radius: 8px;
+        border: 2px solid white;
+        box-shadow: 0 0 0 1px #e2e8f0;
+    }
+
+    .code-pill {
+        background: #f1f5f9;
+        color: #475569;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 0.8rem;
+        font-family: monospace;
+    }
+
+    .main-text {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 0.95rem;
+    }
+
+    .date-info {
         display: flex;
         flex-direction: column;
+    }
+
+    .d-date {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 0.85rem;
+    }
+
+    .d-time {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    /* Actions */
+    .actions-cell {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-action {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
         align-items: center;
         justify-content: center;
-        padding: 40px;
     }
 
-    .loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #6366f1;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 15px;
-    }
-
-    @@keyframes spin {
-        0% {
-            transform: rotate(0deg);
+        .btn-action:hover {
+            transform: translateY(-2px);
         }
 
-        100% {
-            transform: rotate(360deg);
+        .btn-action.edit:hover {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
         }
+
+        .btn-action.delete:hover {
+            background: #fef2f2;
+            border-color: #fecaca;
+        }
+
+    /* Buttons */
+    .btn-modern {
+        border: none;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s;
+        font-size: 0.95rem;
     }
 
+    .btn-gradient {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+    }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.35);
+        }
+
+    .btn-outline {
+        background: white;
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+    }
+
+        .btn-outline:hover {
+            background: #f8fafc;
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+    /* Footer */
     .table-footer {
-        padding: 15px;
-        background: #f8fafc;
+        padding: 18px 24px;
+        background: #fcfcfd;
+        border-top: 1px solid var(--border-color);
         font-size: 0.85rem;
-        color: #64748b;
-        border-top: 1px solid #edf2f7;
+        color: var(--text-muted);
+    }
+
+    /* Loading & Empty States */
+    .loading-state, .empty-state {
+        padding: 5rem 2rem;
+        text-align: center;
+    }
+
+    .spinner {
+        width: 35px;
+        height: 35px;
+        border: 4px solid #f1f5f9;
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1.5rem;
+    }
+    @@keyframes spin {
+        to
+
+    {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    .empty-icon-bg {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        opacity: 0.2;
+    }
+
+    .empty-state h3 {
+        font-size: 1.4rem;
+        color: var(--text-main);
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    @@media (max-width: 768px) {
+        .page-header
+
+    {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-wrapper {
+        max-width: 100%;
+    }
+
+    .hide-mobile {
+        display: none;
+    }
+
     }
 </style>
 
@@ -371,7 +584,7 @@
         {
             await CategoriaService.ExcluirAsync(id);
             await CarregarCategorias();
-            ToastService.Success("Categoria excluída com sucesso.");
+            ToastService.Success("Categoria removida com sucesso.");
         }
         catch (Exception ex)
         {

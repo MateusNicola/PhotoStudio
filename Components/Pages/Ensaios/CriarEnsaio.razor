@@ -72,7 +72,7 @@
                         <option value="0">Selecione a categoria</option>
                         @foreach (var cat in categorias)
                         {
-                            <option value="@cat.Id">@cat.Codigo - @cat.Descricao</option>
+                            <option value="@cat.Id">@cat.Descricao</option>
                         }
                     </select>
                     @if (novoEnsaio.CategoriaId == 0)

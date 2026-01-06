@@ -12,30 +12,41 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
-<PageTitle>Ensaios - Estúdio de Fotografia</PageTitle>
+<PageTitle>Ensaios | Photo Studio</PageTitle>
 
-<div class="page-container">
+<div class="page-container fade-in">
     <JanelaConfirmacao @ref="janelaConfirmacao" Title="Excluir Ensaio" Message="Tem certeza que deseja excluir este ensaio?" />
 
-    <header class="page-header">
-        <h1>Ensaios</h1>
-        <p class="subtitle">Gerencie seus ensaios fotográficos</p>
-    </header>
+    <div class="page-header">
+        <div class="header-content">
+            <h1 class="page-title">Ensaios Fotográficos</h1>
+            <p class="page-subtitle">Gerencie sua agenda, locais e o status financeiro de cada trabalho.</p>
+        </div>
 
-    <section class="actions-bar">
-        <div class="filters-group">
-            <div class="search-box">
+        <button class="btn-modern btn-gradient" @onclick="IrParaCriarEnsaio">
+            <span class="icon">📸</span>
+            <span>Novo Ensaio</span>
+        </button>
+    </div>
+
+    <div class="toolbar">
+        <div class="filters-container">
+            <div class="search-wrapper">
                 <span class="search-icon">🔍</span>
-                <input type="text" class="form-control" placeholder="Título ou cliente..."
-                       @bind-value="filtroBusca" @bind-value:event="oninput" @onkeyup="AplicarFiltro" />
+                <input type="text"
+                       class="search-input"
+                       placeholder="Título ou cliente..."
+                       @bind="filtroBusca"
+                       @bind:event="oninput"
+                       @onkeyup="AplicarFiltro" />
             </div>
 
-            <div class="filter-item">
-                <input type="date" class="form-control" @bind="filtroData" @bind:after="AplicarFiltro" />
+            <div class="input-group-modern">
+                <input type="date" class="filter-select" @bind="filtroData" @bind:after="AplicarFiltro" />
             </div>
 
-            <div class="filter-item">
-                <select class="form-control" @bind="filtroCategoriaId" @bind:after="AplicarFiltro">
+            <div class="input-group-modern">
+                <select class="filter-select" @bind="filtroCategoriaId" @bind:after="AplicarFiltro">
                     <option value="0">Todas as Categorias</option>
                     @foreach (var cat in categorias)
                     {
@@ -46,167 +57,207 @@
 
             @if (TemFiltroAtivo)
             {
-                <button class="btn-clear" @onclick="LimparFiltros" title="Limpar Filtros">🧹</button>
+                <button class="btn-clear-filters" @onclick="LimparFiltros" title="Limpar Filtros">
+                    Limpar Filtros ✕
+                </button>
             }
         </div>
 
-        <button class="btn btn-primary" @onclick="IrParaCriarEnsaio">
-            <span>📸 Novo Ensaio</span>
-        </button>
-    </section>
+        <div class="stats-badge">
+            <span class="badge-label">Resultados</span>
+            <span class="badge-value">@ensaiosFiltrados.Count</span>
+        </div>
+    </div>
 
-    <div class="table-container">
+    <div class="content-card">
         @if (carregando)
         {
-            <div class="loading-container"><div class="loading-spinner"></div><p>Carregando...</p></div>
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Sincronizando sua agenda...</p>
+            </div>
         }
+        else if (ensaiosFiltrados.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon-bg">📅</div>
+                <h3>Nenhum ensaio encontrado</h3>
+                <p>
+                    @(TemFiltroAtivo
+                                    ? "Não encontramos resultados para os filtros aplicados."
+                                    : "Sua agenda está vazia. Comece agendando um novo ensaio fotográfico!")
+            </p>
+            <button class="btn-modern @(TemFiltroAtivo ? "btn-outline" : "btn-gradient")"
+                    @onclick="@(TemFiltroAtivo? LimparFiltros : IrParaCriarEnsaio)">
+                @(TemFiltroAtivo ? "Limpar Filtros" : "Agendar Ensaio")
+            </button>
+        </div>
+                }
         else
         {
-            @if (ensaiosFiltrados.Count == 0)
-            {
-                <div class="empty-state-container">
-                    <div class="empty-state-content">
-                        <div class="empty-state-icon-wrapper">
-                            <span class="empty-state-icon">📸</span>
-                            <div class="empty-state-pulse"></div>
-                        </div>
-                        <h3>Nenhum ensaio encontrado</h3>
-                        <p>
-                            @(TemFiltroAtivo
-                                                ? "Não encontramos ensaios com os filtros aplicados. Tente ajustar sua busca ou limpar os filtros."
-                                                : "Sua agenda está livre! Que tal começar agendando um novo ensaio fotográfico?")
-                </p>
-
-                @if (TemFiltroAtivo)
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th width="35%">Informações do Ensaio</th>
+                            <th width="20%">Data e Hora</th>
+                            <th width="25%" class="hide-mobile">Localização</th>
+                            <th width="20%" style="text-align: right;">Financeiro</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in ensaiosPaginados)
                         {
-                            <button class="btn-outline" @onclick="LimparFiltros">
-                                🧹 Limpar Filtros
-                            </button>
-                        }
-                        else
-                        {
-                            <button class="btn btn-primary btn-lg" @onclick="IrParaCriarEnsaio">
-                                <span>📸 Agendar Primeiro Ensaio</span>
-                            </button>
-                        }
-                    </div>
-                </div>
-            }
-            else
-            {
-                <div class="table-scroll">
-                    <table class="styled-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 35%;">Informações do Ensaio</th>
-                                <th style="width: 25%;">Data e Hora</th>
-                                <th style="width: 25%;">Local</th>
-                                <th style="width: 15%;">Financeiro</th>
+                            <tr @onclick="() => Editar(e.Id)" class="clickable-row">
+                                <td>
+                                    <div class="info-cell">
+                                        <span class="main-title">@e.Titulo</span>
+                                        <div class="sub-info-tags">
+                                            @if (e.Categoria != null)
+                                            {
+                                                <span class="category-dot" style="background: @e.Categoria.Cor"></span>
+                                                <span class="category-name">@e.Categoria.Descricao</span>
+                                            }
+                                            <span class="divider">•</span>
+                                            <span class="client-link">👤 @e.Cliente?.Nome</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="date-cell">
+                                        <span class="d-date">@e.Data.ToString("dd/MM/yyyy")</span>
+                                        <span class="d-time">🕒 @e.Data.ToString("HH:mm")</span>
+                                    </div>
+                                </td>
+                                <td class="hide-mobile">
+                                    <div class="location-cell">
+                                        <span class="loc-text" title="@e.Local">📍 @(e.Local?.Length > 30 ? e.Local.Substring(0, 27) + "..." : e.Local)</span>
+                                    </div>
+                                </td>
+                                <td style="text-align: right;">
+                                    <div class="finance-cell">
+                                        <span class="price-tag">@(e.Valor?.ToString("C") ?? "R$ 0,00")</span>
+                                        <span class="status-pill" style="background: @(ObterCorSituacao(e.Situacao) + "15"); color: @ObterCorSituacao(e.Situacao)">
+                                            @e.Situacao
+                                        </span>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var e in ensaiosPaginados)
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-footer">
+                <span class="footer-info">Mostrando @ensaiosPaginados.Count() de @ensaiosFiltrados.Count ensaios</span>
+
+                <div class="pagination-controls">
+                    <button class="btn-page-nav" disabled="@(paginaAtual == 1)" @onclick="() => MudarPagina(paginaAtual - 1)">❮</button>
+
+                    <div class="page-numbers">
+                        @for (int i = 1; i <= totalPaginas; i++)
+                        {
+                            var p = i;
+                            if (i == 1 || i == totalPaginas || (i >= paginaAtual - 1 && i <= paginaAtual + 1))
                             {
-                                <tr @onclick="() => Editar(e.Id)">
-                                    <td>
-                                        <div class="info-cell">
-                                            <span class="titulo-principal">@e.Titulo</span>
-                                            <div class="sub-info">
-                                                @if (e.Categoria != null)
-                                                {
-                                                    <span class="tipo-badge" style="background: @e.Categoria.Cor">@e.Categoria.Descricao</span>
-                                                }
-                                                <span class="cliente-nome">👤 @e.Cliente.Nome</span>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>📅 @e.Data.ToString("dd/MM/yyyy") às @e.Data.ToString("HH:mm")</td>
-                                    <td>📍 @e.Local</td>
-                                    <td>
-                                        <div class="financeiro-cell">
-                                            <strong>@(e.Valor?.ToString("C") ?? "-")</strong>
-                                            <span class="situacao-badge" style="background: @ObterCorSituacao(e.Situacao)">@e.Situacao</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <button class="btn-page-number @(p == paginaAtual ? "active" : "")" @onclick="() => MudarPagina(p)">@p</button>
                             }
-                        </tbody>
-                    </table>
-                </div>
-
-                <footer class="pagination-container">
-                    <div class="pagination-info">Mostrando @ensaiosPaginados.Count() de @ensaiosFiltrados.Count ensaios</div>
-                    <div class="pagination-controls">
-                        <button class="btn-pager" disabled="@(paginaAtual == 1)" @onclick="() => MudarPagina(paginaAtual - 1)">
-                            <span class="pager-icon">❮</span>
-                            <span class="pager-text">Anterior</span>
-                        </button>
-
-                        <div class="pager-numbers">
-                            @for (int i = 1; i <= totalPaginas; i++)
-                            {
-                                var p = i;
-                                <button class="btn-number @(p == paginaAtual ? "active" : "")" @onclick="() => MudarPagina(p)">
-                                    @p
-                                </button>
-                            }
-                        </div>
-
-                        <button class="btn-pager" disabled="@(paginaAtual >= totalPaginas)" @onclick="() => MudarPagina(paginaAtual + 1)">
-                            <span class="pager-text">Próximo</span>
-                            <span class="pager-icon">❯</span>
-                        </button>
+                        }
                     </div>
-                </footer>
-            }
+
+                    <button class="btn-page-nav" disabled="@(paginaAtual >= totalPaginas)" @onclick="() => MudarPagina(paginaAtual + 1)">❯</button>
+                </div>
+            </div>
         }
     </div>
 </div>
 
 <style>
+    :root {
+        --primary: #6366f1;
+        --primary-hover: #4f46e5;
+        --bg-body: #f8fafc;
+        --text-main: #1e293b;
+        --text-muted: #64748b;
+        --border-color: #e2e8f0;
+        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+
     .page-container {
-        height: 100vh;
-        display: flex;
-        flex-direction: column;
-        padding: 24px;
-        overflow: hidden;
-        background-color: #f8fafc;
-        box-sizing: border-box;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: var(--bg-body);
+        min-height: 100vh;
+        font-family: 'Inter', sans-serif;
     }
 
+    .fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    /* Header */
     .page-header {
-        margin-bottom: 20px;
-        flex-shrink: 0;
-    }
-
-        .page-header h1 {
-            font-size: 2.2rem;
-            margin: 0;
-            color: #1a202c;
-        }
-
-    .subtitle {
-        color: #718096;
-        margin: 5px 0 0;
-    }
-
-
-    .actions-bar {
         display: flex;
         justify-content: space-between;
-        align-items: flex-end;
-        margin-bottom: 20px;
-        flex-shrink: 0;
-    }
-
-    .filters-group {
-        display: flex;
-        gap: 12px;
         align-items: center;
+        margin-bottom: 2rem;
     }
 
-    .search-box {
+    .page-title {
+        font-size: 1.85rem;
+        font-weight: 800;
+        color: var(--text-main);
+        margin: 0;
+    }
+
+    .page-subtitle {
+        color: var(--text-muted);
+        margin-top: 0.25rem;
+    }
+
+    /* Toolbar & Filtros */
+    .toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        gap: 1rem;
+    }
+
+    .filters-container {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        flex: 1;
+    }
+
+    .search-wrapper {
         position: relative;
+        width: 280px;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 10px 12px 10px 38px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        background: white;
+        font-size: 0.9rem;
     }
 
     .search-icon {
@@ -214,285 +265,271 @@
         left: 12px;
         top: 50%;
         transform: translateY(-50%);
-        color: #a0aec0;
-        z-index: 1;
+        color: #94a3b8;
     }
 
-    .form-control {
-        padding: 10px 14px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
+    .filter-select {
+        padding: 9px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
         background: white;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
+        color: var(--text-main);
+        outline: none;
     }
 
-    .search-box .form-control {
-        padding-left: 35px;
-        min-width: 250px;
-    }
-
-    .btn-primary {
-        background: #6366f1;
-        color: white;
+    .btn-clear-filters {
+        background: none;
         border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
+        color: #ef4444;
+        font-size: 0.85rem;
         font-weight: 600;
         cursor: pointer;
-        transition: opacity 0.2s;
     }
 
-    .table-container {
-        flex: 1;
+    /* Cards e Tabela */
+    .content-card {
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        min-height: 0;
+        border-radius: 16px;
+        box-shadow: var(--card-shadow);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
     }
 
-    .table-scroll {
-        flex: 1;
-        overflow-y: auto;
-        overflow-x: auto;
-    }
-
-    .styled-table {
+    .modern-table {
         width: 100%;
         border-collapse: collapse;
     }
 
-        .styled-table thead th {
-            position: sticky;
-            top: 0;
+        .modern-table thead th {
             background: #f8fafc;
-            padding: 16px;
+            padding: 14px 24px;
             text-align: left;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            color: #64748b;
-            border-bottom: 1px solid #e2e8f0;
+            color: var(--text-muted);
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .styled-table tbody td {
-            padding: 16px;
-            border-bottom: 1px solid #f1f5f9;
-            cursor: pointer;
-        }
-
-        .styled-table tr:hover {
-            background: #f8fafc;
-        }
-
-
-    .pagination-container {
-        padding: 16px;
-        border-top: 1px solid #e2e8f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-shrink: 0;
+    .clickable-row {
+        cursor: pointer;
+        transition: background 0.2s;
+        border-bottom: 1px solid #f1f5f9;
     }
 
+        .clickable-row:hover {
+            background-color: #f8fafc;
+        }
 
-    .info-cell {
+        .clickable-row td {
+            padding: 18px 24px;
+            vertical-align: middle;
+        }
+
+    /* Células Customizadas */
+    .main-title {
+        display: block;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+    }
+
+    .sub-info-tags {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .category-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .category-name {
+        font-weight: 600;
+    }
+
+    .divider {
+        opacity: 0.4;
+    }
+
+    .date-cell {
         display: flex;
         flex-direction: column;
+        gap: 2px;
+    }
+
+    .d-date {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 0.9rem;
+    }
+
+    .d-time {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+    }
+
+    .loc-text {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+    }
+
+    .finance-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
         gap: 6px;
     }
 
-    .sub-info {
-        display: flex;
-        align-items: center;
-        gap: 10px;
+    .price-tag {
+        font-weight: 700;
+        color: var(--text-main);
     }
 
-    .tipo-badge, .situacao-badge {
+    .status-pill {
         padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        color: white;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    /* Botões Modernos */
+    .btn-modern {
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
         font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+
+    .btn-gradient {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+    }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+    .btn-outline {
+        background: white;
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+    }
+
+    /* Footer e Paginação */
+    .table-footer {
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fcfcfd;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .footer-info {
+        font-size: 0.85rem;
+        color: var(--text-muted);
     }
 
     .pagination-controls {
         display: flex;
-        align-items: center;
-        gap: 12px;
+        gap: 6px;
     }
 
-    .btn-pager {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        background-color: white;
-        color: #4a5568;
-        font-weight: 500;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-        .btn-pager:hover:not(:disabled) {
-            background-color: #f7fafc;
-            border-color: #cbd5e0;
-            color: #2d3748;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
-
-        .btn-pager:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            background-color: #f1f5f9;
-        }
-
-    .pager-numbers {
-        display: flex;
-        gap: 4px;
-    }
-
-    .btn-number {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        background: transparent;
-        color: #64748b;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-        .btn-number:hover:not(.active) {
-            background-color: #edf2f7;
-            color: #2d3748;
-        }
-
-        .btn-number.active {
-            background-color: #6366f1;
-            color: white;
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.4);
-        }
-
-    @@media (max-width: 600px) {
-        .pager-text {
-            display: none;
-        }
-
-        .btn-pager {
-            padding: 8px 12px;
-        }
-    }
-
-    /* Container de Estado Vazio para Ensaios */
-    .empty-state-container {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 40px;
-        text-align: center;
-    }
-
-    .empty-state-content {
-        max-width: 450px;
-    }
-
-    .empty-state-icon-wrapper {
-        position: relative;
-        width: 100px;
-        height: 100px;
-        margin: 0 auto 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #f1f5f9;
-        border-radius: 50%;
-    }
-
-    .empty-state-icon {
-        font-size: 48px;
-        z-index: 2;
-    }
-
-    .empty-state-pulse {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        background: #6366f1;
-        opacity: 0.1;
-        animation: pulse-animation 2s infinite;
-    }
-
-    @@keyframes pulse-animation {
-        0% {
-            transform: scale(0.9);
-            opacity: 0.2;
-        }
-
-        70% {
-            transform: scale(1.2);
-            opacity: 0;
-        }
-
-        100% {
-            transform: scale(0.9);
-            opacity: 0;
-        }
-    }
-
-    .empty-state-content h3 {
-        font-size: 1.6rem;
-        color: #1a202c;
-        margin-bottom: 12px;
-    }
-
-    .empty-state-content p {
-        color: #718096;
-        font-size: 1rem;
-        line-height: 1.5;
-        margin-bottom: 24px;
-    }
-
-    .btn-lg {
-        padding: 14px 28px;
-        font-size: 1.1rem;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .btn-outline {
+    .btn-page-nav, .btn-page-number {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--border-color);
         background: white;
-        border: 2px solid #e2e8f0;
-        color: #4a5568;
-        padding: 10px 24px;
         border-radius: 8px;
-        font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s;
+        font-size: 0.85rem;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-        .btn-outline:hover {
-            background: #f8fafc;
-            border-color: #6366f1;
-            color: #6366f1;
+        .btn-page-number.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
 
-    .btn-clear {
-        background: none;
-        border: none;
-        font-size: 1.2rem;
-        cursor: pointer;
-        padding: 5px;
+    /* States */
+    .loading-state, .empty-state {
+        padding: 4rem;
+        text-align: center;
+        color: var(--text-muted);
+    }
+
+    .spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid #e2e8f0;
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    @@keyframes spin {
+        to
+
+    {
+        transform: rotate(360deg);
+    }
+
+    }
+
+    .empty-icon-bg {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.3;
+    }
+
+    @@media (max-width: 768px) {
+        .page-header
+
+    {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filters-container {
+        flex-wrap: wrap;
+    }
+
+    .search-wrapper {
+        width: 100%;
+    }
+
+    .hide-mobile {
+        display: none;
+    }
+
     }
 </style>
 
@@ -503,9 +540,9 @@
     private bool carregando = true;
     private string filtroBusca = "";
     private DateTime? filtroData;
-    private int filtroCategoriaId = 0; // Mudado de Enum para ID
+    private int filtroCategoriaId = 0;
     private int paginaAtual = 1;
-    private int itensPorPagina = 6;
+    private int itensPorPagina = 8;
 
     private JanelaConfirmacao? janelaConfirmacao;
     private bool TemFiltroAtivo => !string.IsNullOrWhiteSpace(filtroBusca) || filtroData.HasValue || filtroCategoriaId != 0;
@@ -525,22 +562,16 @@
 
             if (int.TryParse(claimId, out int usuarioId))
             {
-                // Carrega categorias do usuário para o filtro
                 categorias = await CategoriaService.ListarPorUsuarioAsync(usuarioId);
-                // Carrega ensaios (O EnsaioService já deve trazer o Objeto Categoria junto)
                 ensaios = await EnsaioService.ListarTodosAsync();
             }
             AplicarFiltro();
         }
-        finally { carregando = false; }
-    }
-
-    private void MudarPagina(int novaPagina)
-    {
-        if (novaPagina >= 1 && novaPagina <= totalPaginas)
+        catch (Exception ex)
         {
-            paginaAtual = novaPagina;
+            ToastService.Error("Erro ao carregar dados: " + ex.Message);
         }
+        finally { carregando = false; }
     }
 
     private void AplicarFiltro()
@@ -553,6 +584,11 @@
                      && (!filtroData.HasValue || e.Data.Date == filtroData.Value.Date)
                      && (filtroCategoriaId == 0 || e.CategoriaId == filtroCategoriaId))
             .OrderByDescending(e => e.Data).ToList();
+    }
+
+    private void MudarPagina(int novaPagina)
+    {
+        if (novaPagina >= 1 && novaPagina <= totalPaginas) paginaAtual = novaPagina;
     }
 
     private void LimparFiltros() { filtroBusca = ""; filtroData = null; filtroCategoriaId = 0; AplicarFiltro(); }
